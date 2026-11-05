@@ -45,6 +45,11 @@ export function useBtcPrice(): BtcPrice | null {
   return price
 }
 
+/** The price if this visit already fetched it, without fetching. For illustrations like the hero. */
+export function peekBtcPrice(): BtcPrice | null {
+  return latest ?? null
+}
+
 /** "$0.98" in English, "1,432원" in Korean. */
 export function formatFiat(sats: number, price: BtcPrice, lang: Lang): string {
   const btc = sats / 1e8

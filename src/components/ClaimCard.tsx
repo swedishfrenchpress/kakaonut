@@ -1,6 +1,6 @@
-import { useId, useState, type FormEvent } from 'react'
-import { useI18n } from '../i18n'
-import { useFlash } from '../hooks'
+import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent } from 'react'
+import { satsUnit, useI18n } from '../i18n'
+import { prefersReducedMotion, useFlash } from '../hooks'
 import { copyText } from '../actions'
 import { claimLink } from '../config'
 import { LnAddressError, parseLightningAddress } from '../lightning'
@@ -10,6 +10,7 @@ import { addToken } from '../wallet'
 import { Typing } from './Chat'
 import { Loading } from './Buddies'
 import { CheckIcon } from './Icons'
+import { FlashLabel } from './Flash'
 
 /**
  * What Open shows when a photo holds bitcoin, shaped like a money message in a chat: the amount on
@@ -38,17 +39,22 @@ export function ClaimCard({ token, check }: { token: string; check: TokenCheck }
 
   const { amount, mint } = check.summary
   const gone = !sent && (check.claim === 'spent' || check.claim === 'pending')
+  // Until the mint answers, the ways to take the money wait: an already-claimed photo would
+  // otherwise offer Claim for a moment and then turn grey.
+  const checking = check.claim === 'checking'
 
   return (
     <div className={`money${gone ? ' is-gone' : ''}`} data-testid={sent ? 'ln-sent' : 'money'}>
       <div className="money-top">
-        <Amount sats={sent ? sent.sent : amount} />
+        <div className={`money-amount${sent ? ' is-new' : ''}`} key={sent ? 'sent' : 'claim'}>
+          <Amount sats={sent ? sent.sent : amount} />
+        </div>
         <span className="sr-only" data-testid="claim-state">
           {t(`state.${check.claim}`)}
         </span>
       </div>
 
-      <div className="money-bottom">
+      <div className={`money-bottom${checking ? ' is-checking' : ''}`} aria-busy={checking || undefined}>
         {sent ? (
           <Sent result={sent} />
         ) : gone ? (
@@ -72,9 +78,9 @@ export function ClaimCard({ token, check }: { token: string; check: TokenCheck }
             <div className="money-split">
               <button
                 type="button"
-                onClick={async () => flash((await copyText(token)) ? t('action.copied') : t('action.copyFailed'))}
+                onClick={async () => flash((await copyText(token)) ? t('action.copied') : t('action.copyFailedShort'))}
               >
-                {copied ?? t('claim.copy')}
+                <FlashLabel flash={copied}>{t('claim.copy')}</FlashLabel>
               </button>
               <button type="button" aria-controls={formId} onClick={() => setMode('lightning')}>
                 {t('claim.lightning')}
@@ -92,17 +98,25 @@ function Amount({ sats }: { sats: number }) {
   const { lang, num } = useI18n()
   const price = useBtcPrice()
   const number = <span className="token-num">{num(sats)}</span>
+  // --chars shrinks a long amount to fit on one line; an amount never breaks mid-number.
+  const fit = (chars: number) => ({ '--chars': chars }) as CSSProperties
   if (!price) {
     return (
-      <p className="money-main">
-        {number} <span className="money-unit">sats</span>
+      <p className="money-main" style={fit(num(sats).length + 3)}>
+        {number} <span className="money-unit">{satsUnit(sats)}</span>
       </p>
     )
   }
+  const fiat = formatFiat(sats, price, lang)
   return (
     <>
-      <p className="money-main">{formatFiat(sats, price, lang)}</p>
-      <p className="money-sub">{number} sats</p>
+      {/* 원 is a full-width glyph: count it as two. */}
+      <p className="money-main" style={fit(fiat.length + (lang === 'ko' ? 1 : 0))}>
+        {fiat}
+      </p>
+      <p className="money-sub">
+        {number} {satsUnit(sats)}
+      </p>
     </>
   )
 }
@@ -124,14 +138,32 @@ function LightningForm({
   const [address, setAddress] = useState('')
   const [step, setStep] = useState<SendStep | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Counts rejected sends; each one shakes the row once, so a repeat of the same error still shows.
+  const [shake, setShake] = useState(0)
+  const row = useRef<HTMLDivElement>(null)
   const parsed = parseLightningAddress(address)
   const inputId = `${id}-input`
+
+  useEffect(() => {
+    if (!shake || prefersReducedMotion()) return
+    row.current?.animate(
+      [
+        { transform: 'none' },
+        { transform: 'translateX(-6px)' },
+        { transform: 'translateX(5px)' },
+        { transform: 'translateX(-3px)' },
+        { transform: 'none' },
+      ],
+      { duration: 280, easing: 'ease-out' },
+    )
+  }, [shake])
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (step) return
     if (!parsed) {
       setError(t('ln.err.invalid'))
+      setShake((n) => n + 1)
       return
     }
     setError(null)
@@ -152,6 +184,7 @@ function LightningForm({
       onSent(result)
     } catch (err) {
       setError(errorText(err, parsed.address, t, num))
+      setShake((n) => n + 1)
     } finally {
       setStep(null)
       onBusy(false)
@@ -171,7 +204,7 @@ function LightningForm({
       <label className="sr-only" htmlFor={inputId}>
         {t('ln.label')}
       </label>
-      <div className="money-ln-row">
+      <div className="money-ln-row" ref={row}>
         <input
           id={inputId}
           className="money-ln-input"

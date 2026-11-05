@@ -17,6 +17,9 @@ let worker: Worker | null | undefined
 let nextId = 1
 const waiting = new Map<number, { resolve: (r: WorkerResponse) => void }>()
 
+/** A read or make that takes longer than this has hung (a phone killing the worker for memory). */
+const TIMEOUT_MS = 20_000
+
 function getWorker(): Worker | null {
   if (worker !== undefined) return worker
   try {
@@ -43,7 +46,21 @@ async function call(req: RequestBody, transfer: Transferable[]): Promise<WorkerR
   if (w) {
     const id = nextId++
     const res = await new Promise<WorkerResponse>((resolve) => {
-      waiting.set(id, { resolve })
+      const timer = setTimeout(() => {
+        // Start a fresh worker next time; this one is stuck or gone.
+        waiting.delete(id)
+        if (worker === w) {
+          w.terminate()
+          worker = undefined
+        }
+        resolve({ id, ok: false, error: 'timeout' })
+      }, TIMEOUT_MS)
+      waiting.set(id, {
+        resolve: (r) => {
+          clearTimeout(timer)
+          resolve(r)
+        },
+      })
       w.postMessage({ ...req, id }, transfer)
     })
     if (res.ok || res.error !== 'worker-failed') return res
@@ -59,6 +76,16 @@ async function call(req: RequestBody, transfer: Transferable[]): Promise<WorkerR
   } catch (e) {
     return { id: 0, ok: false, error: e instanceof Error ? e.message : String(e) }
   }
+}
+
+/**
+ * Downloads the reading code ahead of time, so a photo can still be read if the connection drops
+ * later. Also gives a worker that failed to start (often: offline at the time) another chance.
+ */
+export function warmUpReader(): void {
+  if (worker === null) worker = undefined
+  getWorker()
+  import('./read').catch(() => {})
 }
 
 export async function makeStickerInWorker(pixels: Pixels, token: string): Promise<MadeSticker> {

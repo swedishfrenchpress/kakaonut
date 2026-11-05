@@ -4,6 +4,7 @@ import { detectLang, formatBytes, formatNumber, translate, type Lang, type Vars 
 import { loadJson, saveJson } from '../storage'
 
 export type { Lang, Key }
+export { satsUnit } from './translate'
 
 const STORAGE_KEY = 'kakaonut.lang'
 

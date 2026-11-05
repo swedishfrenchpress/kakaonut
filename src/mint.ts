@@ -16,8 +16,22 @@ export interface TokenSummary {
 type CashuModule = typeof import('@cashu/cashu-ts')
 type WalletInstance = InstanceType<CashuModule['Wallet']>
 
+const toNum = (a: { toString(): string } | number) => Number(a.toString())
+
+/** The Cashu code couldn't be downloaded (offline, or an old file name after a deploy). Worth a retry. */
+export class OfflineError extends Error {
+  constructor(cause?: unknown) {
+    super('offline', { cause })
+  }
+}
+
 let cashu: Promise<CashuModule> | undefined
-const loadCashu = () => (cashu ??= import('@cashu/cashu-ts'))
+/** Loads the Cashu code once. A failed load is forgotten, so the next try downloads it again. */
+export const loadCashu = (): Promise<CashuModule> =>
+  (cashu ??= import('@cashu/cashu-ts').catch((e: unknown) => {
+    cashu = undefined
+    throw new OfflineError(e)
+  }))
 
 const wallets = new Map<string, Promise<WalletInstance>>()
 
@@ -83,10 +97,55 @@ export interface Invoice {
   request: string
 }
 
+/** The amount is outside what the mint takes in one Lightning deposit. */
+export class AmountRangeError extends Error {
+  constructor(
+    readonly min: number,
+    readonly max: number,
+  ) {
+    super('amount-range')
+  }
+}
+
+/** The mint's own limits for one Lightning deposit, from its info. Null if it doesn't publish any. */
+function depositLimits(wallet: WalletInstance): { min: number; max: number } | null {
+  try {
+    const method = wallet
+      .getMintInfo()
+      .isSupported(4)
+      .params.find((p) => p.method === 'bolt11' && p.unit === 'sat')
+    if (!method) return null
+    return {
+      min: method.min_amount == null ? 1 : toNum(method.min_amount),
+      max: method.max_amount == null ? Infinity : toNum(method.max_amount),
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function createInvoice(mintUrl: string, amount: number): Promise<Invoice> {
   const wallet = await walletFor(mintUrl, 'sat')
+  // Checked here so the person gets the limit in their own language, not the mint's error text.
+  const limits = depositLimits(wallet)
+  if (limits && (amount < limits.min || amount > limits.max)) throw new AmountRangeError(limits.min, limits.max)
   const q = await wallet.createMintQuoteBolt11(amount, 'Kakaonut')
   return { quote: q.quote, request: q.request }
+}
+
+/**
+ * What kind of failure talking to a mint was: 'offline' (no connection, or the mint is down),
+ * 'busy' (rate limited or a server error), or 'other' (the mint refused, or a bug).
+ */
+export function mintErrorKind(e: unknown): 'offline' | 'busy' | 'other' {
+  const name = e instanceof Error ? e.name : ''
+  const status = (e as { status?: unknown } | null)?.status
+  if (name === 'RateLimitError' || status === 429 || (typeof status === 'number' && status >= 500)) return 'busy'
+  if (name === 'NetworkError') return 'offline'
+  // A bare fetch failure: "Failed to fetch" (Chrome), "Load failed" (Safari), "NetworkError…" (Firefox).
+  if (e instanceof TypeError && /fetch|load failed|network/i.test(e.message)) return 'offline'
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline'
+  return 'other'
 }
 
 export type QuoteState = 'UNPAID' | 'PAID' | 'ISSUED'
@@ -129,7 +188,6 @@ export interface SendResult {
   change?: { token: string; amount: number }
 }
 
-const toNum = (a: { toString(): string } | number) => Number(a.toString())
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /**

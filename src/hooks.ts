@@ -84,3 +84,8 @@ export function useFlash(ms = 1600): [string | null, (msg: string) => void] {
 export function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
+
+/** Smooth scrolling, unless the person asked for less motion. */
+export function scrollBehavior(): ScrollBehavior {
+  return prefersReducedMotion() ? 'auto' : 'smooth'
+}

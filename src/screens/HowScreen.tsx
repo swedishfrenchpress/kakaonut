@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { Fragment, useRef, useState, type KeyboardEvent } from 'react'
 import { useI18n, type Key } from '../i18n'
 import { Character } from '../components/Buddies'
 import { LogoMark } from '../components/Logo'
@@ -27,7 +27,17 @@ export function HowScreen() {
     <section className="how" aria-labelledby="how-title">
       <div className="how-head">
         <h1 id="how-title">{t('how.title')}</h1>
-        <p>{t('how.sub')}</p>
+        <p>
+          {/* Each comma-separated phrase stays whole, so the line breaks at a comma */}
+          {t('how.sub')
+            .split(/(?<=,) /)
+            .map((phrase, i) => (
+              <Fragment key={i}>
+                {i > 0 && ' '}
+                <span className="phrase">{phrase}</span>
+              </Fragment>
+            ))}
+        </p>
         <div className="seg how-tabs" role="tablist" aria-label={t('how.tabs')}>
           {TABS.map((k) => (
             <button

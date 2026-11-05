@@ -33,12 +33,21 @@ export type StickerReadResult = StickerFileFacts &
     | { ok: false; reason: StickerFailure; detail?: string }
   )
 
+/**
+ * Kakaonut makes photos at most 2048 px on the long edge. A PNG far bigger than that can't hold a
+ * sticker, and decoding it could take seconds and more memory than a phone gives a page.
+ */
+const MAX_EDGE = 4096
+
 export function readStickerFromBytes(bytes: Uint8Array): StickerReadResult {
   const info = sniffImage(bytes)
   const facts: StickerFileFacts = { ...info, size: bytes.length, warnings: [] }
 
   if (!isPng(bytes)) {
     return { ...facts, ok: false, reason: info.format === 'unknown' ? 'unreadable' : 'erased' }
+  }
+  if ((info.width ?? 0) > MAX_EDGE || (info.height ?? 0) > MAX_EDGE) {
+    return { ...facts, ok: false, reason: 'none', detail: 'Too big to be a Kakaonut photo.' }
   }
 
   let decoded

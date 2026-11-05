@@ -29,7 +29,6 @@ export function Footer() {
 
       <p className="foot-col foot-col--right">
         <a href="#redeem">{t('footer.redeem')}</a>
-        <br />
         <a href="#how">{t('footer.how')}</a>
         <a className="foot-accent" href="https://cashu.space" target="_blank" rel="noopener noreferrer">
           {t('footer.credit')}

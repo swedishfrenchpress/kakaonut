@@ -1062,6 +1062,7 @@ p + p {
   align-items: baseline;
   gap: 8px;
   margin-top: 2px;
+  container-type: inline-size; /* the number below sizes itself against this width */
 }
 .amount-input {
   display: inline-grid;
@@ -1071,7 +1072,8 @@ p + p {
 .amount-input > * {
   grid-area: 1 / 1;
   font: inherit;
-  font-size: 60px;
+  /* 60px until the number (--chars long, about 0.56em a character) would run under "sats" */
+  font-size: clamp(28px, calc((100cqi - 64px) / (var(--chars, 5) * 0.56)), 60px);
   font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 1.1;
@@ -1229,6 +1231,7 @@ p + p {
 .invoice {
   padding: 32px 24px 16px;
   text-align: center;
+  container-type: inline-size;
 }
 .invoice-title {
   font-size: 15px;
@@ -1236,7 +1239,9 @@ p + p {
 }
 .invoice-amount {
   margin-top: 2px;
-  font-size: 44px;
+  white-space: nowrap;
+  /* Shrinks a long amount instead of wrapping "sats" (or a digit) onto its own line */
+  font-size: clamp(26px, calc((100cqi - 60px) / (var(--chars, 5) * 0.56 + 0.3)), 44px);
   font-weight: 600;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
@@ -1249,6 +1254,17 @@ p + p {
   margin-top: 2px;
   font-size: 13px;
   color: var(--secondary);
+}
+.invoice-warn {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: left;
 }
 .qr {
   display: grid;
@@ -1407,7 +1423,7 @@ p + p {
   padding: 24px 22px 26px;
 }
 .redeem .money-main {
-  font-size: 40px;
+  font-size: clamp(24px, calc(100cqi / (var(--chars, 1) * 0.62)), 40px);
 }
 .redeem .money-sub {
   font-size: 16px;
@@ -1507,6 +1523,16 @@ p + p {
 }
 .notice-title--bad {
   color: var(--bad);
+}
+.notice-note {
+  margin-top: 6px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.notice-detail {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--ink-3);
 }
 
 .done {
@@ -2698,9 +2724,12 @@ p + p {
   background: var(--yellow);
   color: #191919;
   transition: background 0.3s;
+  container-type: inline-size;
 }
+/* An amount stays on one line and shrinks to fit (--chars is its length): it never breaks mid-number. */
 .money-main {
-  font-size: 34px;
+  white-space: nowrap;
+  font-size: clamp(22px, calc(100cqi / (var(--chars, 1) * 0.62)), 34px);
   font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 1.05;

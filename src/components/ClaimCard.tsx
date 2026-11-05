@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useState, type CSSProperties, type FormEvent } from 'react'
 import { useI18n } from '../i18n'
 import { useFlash } from '../hooks'
 import { copyText } from '../actions'
@@ -92,16 +92,22 @@ function Amount({ sats }: { sats: number }) {
   const { lang, num } = useI18n()
   const price = useBtcPrice()
   const number = <span className="token-num">{num(sats)}</span>
+  // --chars shrinks a long amount to fit on one line; an amount never breaks mid-number.
+  const fit = (chars: number) => ({ '--chars': chars }) as CSSProperties
   if (!price) {
     return (
-      <p className="money-main">
+      <p className="money-main" style={fit(num(sats).length + 3)}>
         {number} <span className="money-unit">sats</span>
       </p>
     )
   }
+  const fiat = formatFiat(sats, price, lang)
   return (
     <>
-      <p className="money-main">{formatFiat(sats, price, lang)}</p>
+      {/* 원 is a full-width glyph: count it as two. */}
+      <p className="money-main" style={fit(fiat.length + (lang === 'ko' ? 1 : 0))}>
+        {fiat}
+      </p>
       <p className="money-sub">{number} sats</p>
     </>
   )

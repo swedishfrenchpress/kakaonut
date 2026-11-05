@@ -9,9 +9,9 @@ import type { CSSProperties } from 'react'
 const INK = '#191919'
 const LINE = 2.6
 
-function Coin() {
+function Coin({ still = false }: { still?: boolean }) {
   return (
-    <svg className="buddy" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+    <svg className={still ? 'buddy buddy--still' : 'buddy'} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
       <circle cx="20" cy="21" r="15" fill="#F7931A" stroke={INK} strokeWidth={LINE} />
       <circle cx="20" cy="21" r="11.2" fill="none" stroke="#D9760C" strokeWidth="1.6" />
       <path d="M10.2 17.4a10.6 10.6 0 0 1 5.6-6.4" stroke="#FFD08A" strokeWidth="2.2" strokeLinecap="round" fill="none" />
@@ -22,9 +22,9 @@ function Coin() {
   )
 }
 
-function Photo() {
+function Photo({ still = false }: { still?: boolean }) {
   return (
-    <svg className="buddy" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+    <svg className={still ? 'buddy buddy--still' : 'buddy'} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
       <rect x="7.5" y="5.5" width="25" height="30" rx="4" fill="#fff" stroke={INK} strokeWidth={LINE} />
       <rect x="11.5" y="9.5" width="17" height="13" rx="1.5" fill="#BACEE0" />
       <path d="M11.5 22.5 17 16.8l3.6 3.6 2.6-2.4 5.3 4.5z" fill="#7FA6C8" />
@@ -36,9 +36,9 @@ function Photo() {
   )
 }
 
-function Bolt() {
+function Bolt({ still = false }: { still?: boolean }) {
   return (
-    <svg className="buddy" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+    <svg className={still ? 'buddy buddy--still' : 'buddy'} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
       <path
         d="M25.5 3 7 23.5h10.5L14.5 37.5 33.5 14H23.5z"
         fill="#FEE500"
@@ -50,6 +50,18 @@ function Bolt() {
       <circle cx="23.3" cy="17.6" r="1.7" fill={INK} />
       <path d="M18.6 20.8q1.5 1.3 3 0" stroke={INK} strokeWidth="1.8" strokeLinecap="round" fill="none" />
     </svg>
+  )
+}
+
+const CAST = { coin: Coin, photo: Photo, bolt: Bolt }
+
+/** One character, standing still (for illustrations). */
+export function Character({ kind, size = 56 }: { kind: keyof typeof CAST; size?: number }) {
+  const Drawing = CAST[kind]
+  return (
+    <span className="character" style={{ width: size, height: size }} aria-hidden="true">
+      <Drawing still />
+    </span>
   )
 }
 

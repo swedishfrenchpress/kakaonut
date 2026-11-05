@@ -6,12 +6,14 @@ import { MakeFlow } from './components/MakeFlow'
 import { useI18n, type Lang } from './i18n'
 import { TestScreen } from './screens/TestScreen'
 import { OpenScreen } from './screens/OpenScreen'
+import { HowScreen } from './screens/HowScreen'
 
-type Page = 'make' | 'open' | 'test'
+type Page = 'make' | 'open' | 'test' | 'how'
 
 function pageFromHash(): Page {
   if (location.hash === '#open') return 'open'
   if (location.hash === '#test') return 'test'
+  if (location.hash === '#how') return 'how'
   return 'make' // '', '#make'
 }
 
@@ -68,6 +70,9 @@ export function App() {
       </main>
       <main className="page page--chat" hidden={page !== 'test'}>
         <TestScreen active={page === 'test'} />
+      </main>
+      <main className="page page--how" hidden={page !== 'how'}>
+        <HowScreen />
       </main>
 
       <Footer />

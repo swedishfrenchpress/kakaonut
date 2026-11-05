@@ -30,8 +30,10 @@ export function Footer() {
       <p className="foot-col foot-col--right">
         <a href="#open">{t('footer.open')}</a>
         <br />
-        <a href="#test">{t('footer.test')}</a>
-        <span className="foot-accent">{t('footer.credit')}</span>
+        <a href="#how">{t('footer.how')}</a>
+        <a className="foot-accent" href="https://cashu.space" target="_blank" rel="noopener noreferrer">
+          {t('footer.credit')}
+        </a>
       </p>
     </footer>
   )

@@ -707,4 +707,27 @@ function hostOf(url: string): string {
     transition: none;
   }
 }
+
+/* Short screens (a phone held sideways): the sheet scrolls and drops decoration so the buttons
+   stay reachable. */
+@media (max-height: 520px) {
+  .photo-claim {
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+  }
+  .pc-head {
+    min-height: 48px;
+  }
+  .pc-pick-main {
+    padding: 8px;
+  }
+  .pc-pick-icon {
+    display: none;
+  }
+  .pc-frame {
+    min-height: 160px;
+    max-height: 48vh;
+  }
+}
 </style>

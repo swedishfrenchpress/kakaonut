@@ -895,7 +895,7 @@ p + p {
 }
 
 /* ---------- Action card: the photo on one side, the money on the other ----------
-   Phones stack heading → photo → panel → saved list on one left edge. From 880 px the photo
+   Phones stack heading → photo → panel → saved list on one left edge. From 720 px the photo
    takes the left column (and stays in view) while the heading and the panel read down the right. */
 .make-grid {
   --make-gap: 28px;
@@ -915,7 +915,7 @@ p + p {
   gap: 28px;
   min-width: 0;
 }
-@media (min-width: 880px) {
+@media (min-width: 720px) {
   .make-grid {
     max-width: 1060px;
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
@@ -1020,7 +1020,7 @@ p + p {
   aspect-ratio: 4 / 3;
   min-height: 0;
 }
-@media (min-width: 880px) {
+@media (min-width: 720px) {
   .picker--has img {
     max-height: 600px;
   }
@@ -1101,12 +1101,18 @@ p + p {
   font-weight: 600;
   color: var(--tertiary);
 }
+/* Four equal presets; with very large system text they wrap to a second row instead of
+   breaking a number in two */
 .presets {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   max-width: 400px;
   margin-top: 14px;
+}
+.presets .preset {
+  flex: 1 1 64px;
+  white-space: nowrap;
 }
 .preset {
   font: inherit;
@@ -1462,7 +1468,7 @@ p + p {
   font-size: 13.5px;
   color: var(--ink-3);
 }
-@media (min-width: 880px) {
+@media (min-width: 720px) {
   .redeem-shot {
     display: block;
   }
@@ -2229,7 +2235,7 @@ p + p {
   color: var(--ink);
 }
 .frame-cell span {
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.25;
   color: var(--ink-3);
 }
@@ -2966,5 +2972,116 @@ p + p {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---------- Mobile: touch, short screens, notches ----------
+   Tested at 344 (Galaxy Z Fold cover), 360 (Galaxy S/A), 375×667 (iPhone SE), 390, 412, 430,
+   780×360 (phones held sideways) and 768 (iPad). */
+
+/* Taps are taps: no double-tap zoom delay on controls */
+a,
+button,
+summary,
+select,
+[role='tab'] {
+  touch-action: manipulation;
+}
+
+/* Every control is at least 44 px tall where a finger has to hit it */
+.modes {
+  padding: 2px;
+}
+.modes a {
+  min-height: 44px;
+}
+.lang-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+.brand {
+  padding: 4px;
+  margin: -4px;
+}
+.preset {
+  min-height: 44px;
+}
+.select select {
+  min-height: 44px;
+}
+.saved-actions .btn {
+  min-height: 44px;
+}
+.saved-trash {
+  min-width: 44px;
+  height: 44px;
+}
+.how-tabs button {
+  min-height: 44px;
+}
+.px-bar {
+  padding: 20px 0;
+}
+.px-bars {
+  margin: -16px 0 -12px;
+}
+.how-source,
+.foot-col a.foot-accent {
+  display: inline-block;
+  padding: 10px 0;
+}
+
+/* Notches and rounded corners only intrude at the sides when a phone is held sideways */
+@media (orientation: landscape) and (max-height: 520px) {
+  .top-row {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .hero,
+  .make,
+  .how {
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+  }
+}
+
+/* Very narrow phones (Galaxy Z Fold cover screen): smaller step pictures, more room for text */
+@media (max-width: 380px) {
+  .how-step {
+    gap: 14px;
+    padding: 14px;
+  }
+  .how-art {
+    width: 56px;
+    height: 56px;
+  }
+  .how-art .character {
+    width: 42px !important;
+    height: 42px !important;
+  }
+}
+
+/* Short screens (a phone held sideways): a slimmer top bar, and photos never taller than the view,
+   so the amount and Pay stay within reach */
+@media (max-height: 520px) {
+  .top-row {
+    height: 52px;
+  }
+  .make,
+  .how {
+    padding-top: 40px;
+  }
+  .make-photo,
+  .make-photo--aside {
+    position: static;
+  }
+  .picker--has img,
+  .make-preview img,
+  .done-photo img,
+  .redeem-shot img {
+    max-height: calc(100svh - 96px);
+  }
+  .make-photo .picker:not(.picker--has) {
+    max-height: calc(100svh - 96px);
   }
 }

@@ -497,6 +497,20 @@ export default {
       kakaonut.openPhotoClaim();
     },
     // Kakaonut: pasting an image anywhere on the wallet page opens the photo claim.
+    // Kakaonut: "Claim in Kakaonut" links carry #token=… . When the wallet is already open (an
+    // installed app reusing its window), only the hash changes, so read the token then too.
+    onKakaonutHash: function () {
+      const hash = window.location.hash || "";
+      if (!hash.includes("token=")) return;
+      const tokenBase64 = hash.split("token=")[1];
+      if (!tokenBase64) return;
+      const seen = this.historyTokens.some(
+        (h) => h.token == tokenBase64 && h.amount > 0
+      );
+      if (seen) return;
+      this.receiveData.tokensBase64 = tokenBase64;
+      this.showReceiveTokens = true;
+    },
     onKakaonutPaste: function (e: ClipboardEvent) {
       const files = Array.from(e.clipboardData?.files ?? []).filter((f) =>
         f.type.startsWith("image/")
@@ -659,8 +673,10 @@ export default {
     // Add window resize listener to handle responsive layouts
     window.addEventListener("resize", this.equalizeButtonWidths);
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
-    if (this.kakaonutMode)
+    if (this.kakaonutMode) {
       window.addEventListener("paste", this.onKakaonutPaste);
+      window.addEventListener("hashchange", this.onKakaonutHash);
+    }
   },
 
   beforeUnmount: function () {
@@ -671,6 +687,7 @@ export default {
       this.handleVisibilityChange
     );
     window.removeEventListener("paste", this.onKakaonutPaste);
+    window.removeEventListener("hashchange", this.onKakaonutHash);
   },
 
   created: async function () {

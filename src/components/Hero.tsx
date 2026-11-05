@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { prefersReducedMotion } from '../hooks'
 import { formatFiat, peekBtcPrice } from '../price'
 import { HeroPhoto, HeroPixels, preloadHeroPhoto } from './HeroPhoto'
+import { Character } from './Buddies'
 import { goToMode } from '../nav'
 
 /**
@@ -26,41 +27,86 @@ const TIMELINE = [
 ]
 const LOOP_MS = 10_200
 const LAST = TIMELINE.length - 1
+const FADE_MS = 300 // the room fading out before it starts again
+const DWELL_MS = 2500 // a whole conversation that is already showing stays readable this long
+const SLIDE = { duration: 320, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }
 
 export function Hero() {
   const { t, num, lang } = useI18n()
-  const [step, setStep] = useState(() => (prefersReducedMotion() ? LAST : 0))
+  const [reduced] = useState(prefersReducedMotion)
+  const [step, setStep] = useState(() => (reduced ? LAST : 0))
   const [cycle, setCycle] = useState(0)
-  const [inView, setInView] = useState(false)
+  const [fading, setFading] = useState(false)
+  // Null until the first look; then whether the phone is on screen enough to play.
+  const [playing, setPlaying] = useState<boolean | null>(null)
   const phone = useRef<HTMLDivElement>(null)
   const photo = useRef<HTMLImageElement>(null)
+  const feed = useRef<HTMLDivElement>(null)
+  const feedHeight = useRef(0)
+  const shown = useRef(step)
 
   useEffect(preloadHeroPhoto, [])
-
-  // Only play while the phone is on screen, so nobody misses the pop.
   useEffect(() => {
+    shown.current = step
+  })
+
+  // Play once nearly half the phone shows. Stop only when it has left the screen entirely, so a
+  // chat someone can still see never empties; a phone that only peeks in rests on the whole chat.
+  useEffect(() => {
+    if (reduced) return
     const el = phone.current
-    if (!el || typeof IntersectionObserver === 'undefined') return setInView(true)
-    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.45 })
+    if (!el || typeof IntersectionObserver === 'undefined') return setPlaying(true)
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.intersectionRatio >= 0.45) setPlaying(true)
+        else if (!e.isIntersecting) setPlaying(false)
+        else setPlaying((p) => p ?? false)
+      },
+      { threshold: [0, 0.45] },
+    )
     io.observe(el)
     return () => io.disconnect()
-  }, [])
+  }, [reduced])
+
+  // Not playing: the finished conversation, standing still.
+  useEffect(() => {
+    if (playing !== false) return
+    setFading(false)
+    setStep(LAST)
+  }, [playing])
 
   useEffect(() => {
-    if (prefersReducedMotion()) return
-    if (!inView) {
-      setStep(0)
-      return
+    if (!playing) return
+    const timers: ReturnType<typeof setTimeout>[] = []
+    const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms))
+    // Fade out what's showing, then start from the top in a fresh room.
+    const restart = (after: number) => {
+      at(after, () => setFading(true))
+      at(after + FADE_MS, () => {
+        setFading(false)
+        setStep(0)
+        setCycle((c) => c + 1)
+      })
     }
-    const timers = TIMELINE.map((at, i) => setTimeout(() => setStep(i), at))
-    timers.push(
-      setTimeout(() => {
-        setStep(-1) // fade everything out, then start again
-        setTimeout(() => setCycle((c) => c + 1), 450)
-      }, LOOP_MS),
-    )
+    if (shown.current !== 0) {
+      restart(DWELL_MS)
+    } else {
+      TIMELINE.forEach((ms, i) => at(ms, () => setStep(i)))
+      restart(LOOP_MS)
+    }
     return () => timers.forEach(clearTimeout)
-  }, [cycle, inView])
+  }, [playing, cycle])
+
+  // A new message pushes the ones above it up: slide them instead of letting them jump.
+  useLayoutEffect(() => {
+    const el = feed.current
+    if (!el) return
+    const h = el.offsetHeight
+    const grew = h - feedHeight.current
+    feedHeight.current = h
+    if (!playing || reduced || grew <= 0) return
+    el.animate([{ transform: `translateY(${grew}px)` }, { transform: 'none' }], SLIDE)
+  }, [step, cycle, playing, reduced])
 
   const now = new Date()
   const time = new Intl.DateTimeFormat(lang, { hour: 'numeric', minute: '2-digit' }).format(now)
@@ -88,9 +134,6 @@ export function Hero() {
       </div>
 
       <div className="hero-stage">
-        <Bubble className="deco deco--a" />
-        <Bubble className="deco deco--b" />
-        <Bubble className="deco deco--c" />
 
         <div className="phone" ref={phone} role="img" aria-label={t('chat.label', { amount: num(AMOUNT) })}>
           <div className="phone-screen" aria-hidden="true">
@@ -111,84 +154,87 @@ export function Hero() {
               </span>
             </div>
 
-            <div className={`kt-room${step < 0 ? ' is-fading' : ''}`} key={cycle}>
+            <div className={`kt-room${fading ? ' is-fading' : ''}`} key={cycle}>
               <div className="kt-date">{date}</div>
-
-              {step >= 1 && (
-                <div className="kt-row kt-row--them">
-                  <span className="kt-avatar">🐰</span>
-                  <div className="kt-col">
-                    <span className="kt-name">{t('chat.friend')}</span>
-                    <div className="kt-line">
-                      <span className="kt-bubble kt-bubble--them">{t('chat.m1')}</span>
-                      <span className="kt-meta">{time}</span>
+              <div className="kt-feed" ref={feed}>
+                {step >= 1 && (
+                  <div className="kt-row kt-row--them">
+                    <span className="kt-avatar">
+                      <Character kind="coin" size={30} />
+                    </span>
+                    <div className="kt-col">
+                      <span className="kt-name">{t('chat.friend')}</span>
+                      <div className="kt-line">
+                        <span className="kt-bubble kt-bubble--them">{t('chat.m1')}</span>
+                        <span className="kt-meta">{time}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {step >= 2 && (
-                <div className="kt-row kt-row--me">
-                  <div className="kt-line">
-                    <span className="kt-meta">
-                      {!read && <b className="kt-unread">1</b>}
-                      {time}
-                    </span>
-                    <span className="kt-bubble kt-bubble--me">{t('chat.m2')}</span>
+                {step >= 2 && (
+                  <div className="kt-row kt-row--me">
+                    <div className="kt-line">
+                      <span className="kt-meta">
+                        {!read && <b className="kt-unread">1</b>}
+                        {time}
+                      </span>
+                      <span className="kt-bubble kt-bubble--me">{t('chat.m2')}</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {step >= 3 && (
-                <div className="kt-row kt-row--me">
-                  <div className="kt-line">
-                    <span className="kt-meta">
-                      {!read && step >= 4 && <b className="kt-unread">1</b>}
-                      {step >= 4 && time}
-                    </span>
-                    <div
-                      className={[
-                        'kt-photo',
-                        step === 3 && 'is-sending',
-                        step === 5 && 'is-lit',
-                        step >= 6 && 'is-open',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      <div className="kt-photo-clip">
-                        <HeroPhoto ref={photo} />
-                        <div className="kt-light">
-                          <HeroPixels source={photo} />
-                        </div>
-                        {step === 3 && <div className="kt-sending" />}
-                      </div>
-                      <div className="kt-photo-foot">
-                        <div className="kt-photo-foot-in">
-                          <div className="kt-photo-foot-body">
-                            <span className="kt-foot-label">{t('chat.inside')}</span>
-                            <b className="kt-foot-main">{fiat || `${num(AMOUNT)} sats`}</b>
-                            {fiat && <span className="kt-foot-sub">{num(AMOUNT)} sats</span>}
+                {step >= 3 && (
+                  <div className="kt-row kt-row--me">
+                    <div className="kt-line">
+                      <span className="kt-meta">
+                        {!read && step >= 4 && <b className="kt-unread">1</b>}
+                        {step >= 4 && time}
+                      </span>
+                      <div
+                        className={[
+                          'kt-photo',
+                          step === 3 && 'is-sending',
+                          step === 5 && 'is-lit',
+                          step >= 6 && 'is-open',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                      >
+                        <div className="kt-photo-clip">
+                          <HeroPhoto ref={photo} />
+                          <div className="kt-light">
+                            <HeroPixels source={photo} />
                           </div>
+                          {(step === 3 || step === 4) && (
+                            <div className={`kt-sending${step === 4 ? ' is-done' : ''}`} />
+                          )}
+                        </div>
+                        <div className="kt-photo-foot">
+                          <span className="kt-foot-label">{t('chat.inside')}</span>
+                          <b className="kt-foot-main">{fiat || `${num(AMOUNT)} sats`}</b>
+                          {fiat && <span className="kt-foot-sub">{num(AMOUNT)} sats</span>}
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {step >= LAST && (
-                <div className="kt-row kt-row--them">
-                  <span className="kt-avatar">🐰</span>
-                  <div className="kt-col">
-                    <span className="kt-name">{t('chat.friend')}</span>
-                    <div className="kt-line">
-                      <span className="kt-bubble kt-bubble--them">{t('chat.m3')}</span>
-                      <span className="kt-meta">{time}</span>
+                {step >= LAST && (
+                  <div className="kt-row kt-row--them">
+                    <span className="kt-avatar">
+                      <Character kind="coin" size={30} />
+                    </span>
+                    <div className="kt-col">
+                      <span className="kt-name">{t('chat.friend')}</span>
+                      <div className="kt-line">
+                        <span className="kt-bubble kt-bubble--them">{t('chat.m3')}</span>
+                        <span className="kt-meta">{time}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <div className="kt-input">
@@ -200,14 +246,6 @@ export function Hero() {
         </div>
       </div>
     </section>
-  )
-}
-
-function Bubble({ className }: { className: string }) {
-  return (
-    <svg className={className} viewBox="0 0 200 180" aria-hidden="true">
-      <path d="M100 8 C156 8 196 42 196 86 C196 130 156 162 100 162 C90 162 80 161 71 159 L34 178 L44 146 C20 132 4 110 4 86 C4 42 44 8 100 8 Z" />
-    </svg>
   )
 }
 

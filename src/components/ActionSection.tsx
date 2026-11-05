@@ -25,7 +25,7 @@ export function ActionSection({ mode, active }: { mode: Mode; active: boolean })
       <div hidden={mode !== 'redeem'}>
         <RedeemFlow
           active={active && mode === 'redeem'}
-          head={mode === 'redeem' && head(t('redeem.title'), t('redeem.sub'))}
+          head={mode === 'redeem' && ((sub: string) => head(t('redeem.title'), sub))}
         />
       </div>
     </section>

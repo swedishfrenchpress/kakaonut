@@ -38,6 +38,14 @@ describe('readStickerFromBytes', () => {
     expect(readStickerFromBytes(jpeg)).toMatchObject({ ok: false, reason: 'erased', format: 'jpeg', width: 640, height: 480 })
   })
 
+  it('turns away a PNG far bigger than Kakaonut makes, without decoding it', () => {
+    // Only the header: a real 6000 × 8000 PNG would take seconds and ~144 MB to decode.
+    const png = encodePng(photo(2, 2))
+    new DataView(png.buffer, png.byteOffset).setUint32(16, 6000)
+    new DataView(png.buffer, png.byteOffset).setUint32(20, 8000)
+    expect(readStickerFromBytes(png)).toMatchObject({ ok: false, reason: 'none', width: 6000, height: 8000 })
+  })
+
   it('says "unreadable" for something that is not an image', () => {
     expect(readStickerFromBytes(bytes('hello, not an image'))).toMatchObject({ ok: false, reason: 'unreadable' })
   })

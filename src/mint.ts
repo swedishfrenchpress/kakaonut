@@ -18,8 +18,20 @@ type WalletInstance = InstanceType<CashuModule['Wallet']>
 
 const toNum = (a: { toString(): string } | number) => Number(a.toString())
 
+/** The Cashu code couldn't be downloaded (offline, or an old file name after a deploy). Worth a retry. */
+export class OfflineError extends Error {
+  constructor(cause?: unknown) {
+    super('offline', { cause })
+  }
+}
+
 let cashu: Promise<CashuModule> | undefined
-const loadCashu = () => (cashu ??= import('@cashu/cashu-ts'))
+/** Loads the Cashu code once. A failed load is forgotten, so the next try downloads it again. */
+export const loadCashu = (): Promise<CashuModule> =>
+  (cashu ??= import('@cashu/cashu-ts').catch((e: unknown) => {
+    cashu = undefined
+    throw new OfflineError(e)
+  }))
 
 const wallets = new Map<string, Promise<WalletInstance>>()
 

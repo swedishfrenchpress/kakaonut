@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import QRCode from 'qrcode'
-import { useI18n } from '../i18n'
+import { satsUnit, useI18n } from '../i18n'
 import { scrollBehavior, useDropImages, useFlash, usePasteImages } from '../hooks'
 import { fitSize, loadPhoto, photoToPixels, type LoadedPhoto } from '../photo'
 import { capacityBytes } from '../stego'
@@ -33,6 +33,7 @@ import { canCopyImage, canShareFiles, copyPng, copyText, downloadBlob, shareFile
 import { DropOverlay } from './Composer'
 import { Buddies, Loading } from './Buddies'
 import { CheckIcon, ChevronIcon, CopyIcon, DownloadIcon, PhotoIcon, ShareIcon, TrashIcon } from './Icons'
+import { FlashLabel } from './Flash'
 
 /**
  * Make: photo → amount → pay → photo with sats inside.
@@ -167,6 +168,10 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       const file = new File([made.png as BlobPart], `kakaonut-${tok.amount}-sats.png`, { type: 'image/png' })
       const url = URL.createObjectURL(file)
       madeUrls.current.push(url)
+      // Decode before showing, so the reveal plays on the photo and not on an empty box.
+      const preview = new Image()
+      preview.src = url
+      await preview.decode().catch(() => {})
       setStage({
         k: 'done',
         saved: tok,
@@ -649,7 +654,7 @@ function InvoiceView({
     <div className="tile invoice" data-testid="invoice">
       <p className="invoice-title">{t('invoice.title')}</p>
       <p className="invoice-amount" style={{ '--chars': num(pending.amount).length } as CSSProperties}>
-        {num(pending.amount)} <span>sats</span>
+        {num(pending.amount)} <span>{satsUnit(pending.amount)}</span>
       </p>
       {isTestMint(pending.mint) && <p className="invoice-note">{t('token.testMint')}</p>}
       {unsaved && (
@@ -657,8 +662,9 @@ function InvoiceView({
           {t('invoice.unsaved')}
         </p>
       )}
+      {/* The code takes a few milliseconds to draw: an empty square of the same size, no loader. */}
       <a className="qr" href={`lightning:${pending.request}`} aria-label={t('invoice.open')}>
-        {qr ? <img src={qr} alt="" /> : <Buddies size={30} />}
+        {qr && <img src={qr} alt="" />}
       </a>
       <Loading className="waiting" label={offline ? t('invoice.offline') : t('invoice.waiting')} size={20} />
       <div className="stack">
@@ -669,10 +675,12 @@ function InvoiceView({
           <button
             type="button"
             className="btn btn--quiet"
-            onClick={async () => flash((await copyText(pending.request)) ? t('action.copied') : t('action.copyFailed'))}
+            onClick={async () =>
+              flash((await copyText(pending.request)) ? t('action.copied') : t('action.copyFailedShort'))
+            }
           >
-            <CopyIcon size={18} />
-            {copied ?? t('invoice.copy')}
+            {copied === t('action.copied') ? <CheckIcon size={18} className="flash-in" /> : <CopyIcon size={18} />}
+            <FlashLabel flash={copied}>{t('invoice.copy')}</FlashLabel>
           </button>
         </div>
         <button type="button" className="btn btn--text" onClick={onCancel}>
@@ -731,8 +739,8 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
                     setFlash((await copyPng(made.file)) ? t('action.copied') : t('action.copyFailed'))
                   }
                 >
-                  <CopyIcon size={18} />
-                  {flash ?? t('action.copyImage')}
+                  {flash === t('action.copied') ? <CheckIcon size={18} className="flash-in" /> : <CopyIcon size={18} />}
+                  <FlashLabel flash={flash}>{t('action.copyImage')}</FlashLabel>
                 </button>
               )}
             </div>
@@ -758,9 +766,9 @@ function RawToken({ token }: { token: string }) {
       <button
         type="button"
         className="btn btn--primary btn--block"
-        onClick={async () => flash((await copyText(token)) ? t('action.copied') : t('action.copyFailed'))}
+        onClick={async () => flash((await copyText(token)) ? t('action.copied') : t('token.copyFailed'))}
       >
-        {copied ?? t('token.copy')}
+        <FlashLabel flash={copied}>{t('token.copy')}</FlashLabel>
       </button>
     </div>
   )

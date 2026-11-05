@@ -55,7 +55,8 @@ export const CopyIcon = (p: P) => (
 
 export const CheckIcon = (p: P) => (
   <Svg {...p}>
-    <path d="m5 12.5 4.5 4.5L19 7.5" />
+    {/* pathLength lets CSS draw the tick from 0 to 1 */}
+    <path d="m5 12.5 4.5 4.5L19 7.5" pathLength={1} />
   </Svg>
 )
 

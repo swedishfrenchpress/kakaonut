@@ -1,0 +1,629 @@
+import { useEffect, useRef, useState } from 'react'
+import QRCode from 'qrcode'
+import { useI18n } from '../i18n'
+import { useDropImages, useFlash, usePasteImages } from '../hooks'
+import { loadPhoto, photoToPixels, type LoadedPhoto } from '../photo'
+import { makeStickerInWorker } from '../workerClient'
+import {
+  MINTS,
+  checkClaimState,
+  createInvoice,
+  invoiceState,
+  isTestMint,
+  mintHost,
+  mintToken,
+  type ClaimState,
+  type MintChoice,
+} from '../mint'
+import { addToken, clearPending, deleteToken, loadPending, loadTokens, savePending, type PendingQuote, type SavedToken } from '../wallet'
+import { canCopyImage, canShareFiles, copyPng, copyText, downloadBlob, shareFile } from '../actions'
+import { DropOverlay } from './Composer'
+import { Burst } from './Burst'
+import { CheckIcon, ChevronIcon, CopyIcon, DownloadIcon, PhotoIcon, ShareIcon } from './Icons'
+
+/**
+ * Make: photo → amount → pay → photo with sats inside.
+ * Money safety (spec 5.5): the quote is saved before the invoice is shown and resumed after a
+ * reload; the token is saved before it's embedded; if saving fails the raw token is shown.
+ */
+
+type Made = { file: File; url: string; width: number; height: number }
+
+type Stage =
+  | { k: 'form' }
+  | { k: 'quoting' }
+  | { k: 'invoice'; pending: PendingQuote }
+  | { k: 'minting'; amount: number }
+  | { k: 'needPhoto'; saved: SavedToken; unsaved: boolean; edge: number }
+  | { k: 'embedding'; saved: SavedToken }
+  | { k: 'done'; saved: SavedToken; made: Made; unsaved: boolean }
+  | { k: 'issued' }
+  | { k: 'error'; message: string; retry?: () => void }
+
+const EDGES = [2048, 1280, 640]
+const PRESETS = [1000, 5000, 10000, 20000]
+const MAX_AMOUNT = 10_000_000
+
+function parseAmount(text: string): number | null {
+  const clean = text.replace(/[\s,._]/g, '')
+  if (!/^\d+$/.test(clean)) return null
+  const n = Number(clean)
+  return n >= 1 && n <= MAX_AMOUNT ? n : null
+}
+
+export function MakeFlow({ active }: { active: boolean }) {
+  const { t, num } = useI18n()
+  const [photo, setPhoto] = useState<LoadedPhoto | null>(null)
+  const [photoError, setPhotoError] = useState(false)
+  const [amountText, setAmountText] = useState('1,000')
+  const [mintChoice, setMintChoice] = useState<MintChoice>('test')
+  const [edge, setEdge] = useState(2048)
+  const [stage, setStage] = useState<Stage>(() => {
+    const pending = loadPending()
+    return pending ? { k: 'invoice', pending } : { k: 'form' }
+  })
+  const [offline, setOffline] = useState(false)
+  const [saved, setSaved] = useState<SavedToken[]>(loadTokens)
+  const photoRef = useRef(photo)
+  photoRef.current = photo
+  const madeUrls = useRef<string[]>([])
+  const card = useRef<HTMLDivElement>(null)
+
+  useEffect(
+    () => () => {
+      photoRef.current?.release()
+      madeUrls.current.forEach((u) => URL.revokeObjectURL(u))
+    },
+    [],
+  )
+
+  const amount = parseAmount(amountText)
+  const mintUrl = MINTS[mintChoice]
+
+  const choosePhoto = async (files: File[]) => {
+    const file = files[0]
+    if (!file) return
+    try {
+      const next = await loadPhoto(file)
+      photoRef.current?.release()
+      setPhoto(next)
+      setPhotoError(false)
+      if (stage.k === 'needPhoto') void embed(stage.saved, next, stage.edge, stage.unsaved)
+    } catch {
+      setPhotoError(true)
+    }
+  }
+
+  const embed = async (tok: SavedToken, from: LoadedPhoto, size: number, unsaved: boolean) => {
+    setStage({ k: 'embedding', saved: tok })
+    try {
+      const pixels = photoToPixels(from, size)
+      const made = await makeStickerInWorker(pixels, tok.token)
+      const file = new File([made.png as BlobPart], `kakaonut-${tok.amount}-sats.png`, { type: 'image/png' })
+      const url = URL.createObjectURL(file)
+      madeUrls.current.push(url)
+      setStage({ k: 'done', saved: tok, made: { file, url, width: made.width, height: made.height }, unsaved })
+      card.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    } catch (e) {
+      setStage({
+        k: 'error',
+        message: t('make.error', { error: errorText(e) }),
+        retry: () => setStage({ k: 'needPhoto', saved: tok, unsaved, edge: size }),
+      })
+    }
+  }
+
+  const finish = async (pending: PendingQuote) => {
+    setStage({ k: 'minting', amount: pending.amount })
+    let token: string
+    try {
+      token = await mintToken(pending.mint, pending.amount, pending.quote)
+    } catch (e) {
+      // The quote stays saved, so a retry (or a reload) picks it up again.
+      setStage({ k: 'error', message: t('make.error', { error: errorText(e) }), retry: () => setStage({ k: 'invoice', pending }) })
+      return
+    }
+    const tok: SavedToken = { id: pending.quote, token, mint: pending.mint, amount: pending.amount, createdAt: Date.now() }
+    const stored = addToken(tok) // saved before anything else happens to it
+    clearPending()
+    setSaved(stored ? loadTokens() : (list) => [tok, ...list])
+    const current = photoRef.current
+    if (!current) setStage({ k: 'needPhoto', saved: tok, unsaved: !stored, edge: pending.edge })
+    else await embed(tok, current, pending.edge, !stored)
+  }
+
+  // Poll the invoice every 2 s while it's on screen (also after a reload).
+  useEffect(() => {
+    if (stage.k !== 'invoice') return
+    const { pending } = stage
+    let stopped = false
+    let timer: ReturnType<typeof setTimeout>
+    const tick = async () => {
+      try {
+        const state = await invoiceState(pending.mint, pending.quote)
+        if (stopped) return
+        setOffline(false)
+        if (state === 'PAID') {
+          stopped = true
+          void finish(pending)
+          return
+        }
+        if (state === 'ISSUED') {
+          stopped = true
+          clearPending()
+          setSaved(loadTokens())
+          setStage({ k: 'issued' })
+          return
+        }
+      } catch {
+        if (!stopped) setOffline(true)
+      }
+      if (!stopped) timer = setTimeout(tick, 2000)
+    }
+    timer = setTimeout(tick, 1000)
+    return () => {
+      stopped = true
+      clearTimeout(timer)
+    }
+  }, [stage])
+
+  const pay = async () => {
+    if (!photo || !amount) return
+    setStage({ k: 'quoting' })
+    try {
+      const inv = await createInvoice(mintUrl, amount)
+      const pending: PendingQuote = { mint: mintUrl, amount, quote: inv.quote, request: inv.request, createdAt: Date.now(), edge }
+      savePending(pending) // before the invoice is shown
+      setStage({ k: 'invoice', pending })
+    } catch (e) {
+      setStage({ k: 'error', message: t('make.error', { error: errorText(e) }), retry: () => setStage({ k: 'form' }) })
+    }
+  }
+
+  const cancel = async (pending: PendingQuote) => {
+    // Paid at the last second? Then finish instead of throwing the payment away.
+    try {
+      if ((await invoiceState(pending.mint, pending.quote)) === 'PAID') return void finish(pending)
+    } catch {
+      // can't tell: keep it simple and cancel
+    }
+    clearPending()
+    setStage({ k: 'form' })
+  }
+
+  const reset = () => {
+    photoRef.current?.release()
+    setPhoto(null)
+    setStage({ k: 'form' })
+  }
+
+  usePasteImages((files) => void choosePhoto(files), active && (stage.k === 'form' || stage.k === 'needPhoto'))
+  const dragging = useDropImages(
+    (files) => void choosePhoto(files),
+    active && (stage.k === 'form' || stage.k === 'needPhoto'),
+  )
+
+  return (
+    <section className="make" id="make" aria-labelledby="make-title">
+      {active && <DropOverlay show={dragging} label={t('drop.overlay')} />}
+      <div className="make-head">
+        <h2 id="make-title">
+          <Burst>{t('make.title')}</Burst>
+        </h2>
+        <p>{t('make.sub')}</p>
+      </div>
+
+      <div className="make-body" ref={card}>
+        {(stage.k === 'form' || stage.k === 'quoting') && (
+          <>
+            <PhotoPicker photo={photo} onFiles={choosePhoto} error={photoError} testId="make-photo-input" />
+
+            <div className="tile amount-tile">
+              <label className="tile-label" htmlFor="make-amount">
+                {t('make.step.amount')}
+              </label>
+              <div className="amount">
+                <input
+                  id="make-amount"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={amountText}
+                  onChange={(e) => {
+                    // Keep the big number readable while typing: 20000 → 20,000.
+                    const digits = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 9)
+                    setAmountText(digits ? num(Number(digits)) : '')
+                  }}
+                  aria-invalid={amount === null}
+                  aria-describedby={amount === null ? 'make-amount-error' : undefined}
+                  style={{ width: `${Math.max(1, amountText.length) + 0.4}ch` }}
+                  data-testid="amount-input"
+                />
+                <span className="amount-unit">sats</span>
+              </div>
+              {amount === null && (
+                <p className="field-error" id="make-amount-error">
+                  {t('make.amount.invalid')}
+                </p>
+              )}
+              <div className="presets">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className="preset"
+                    aria-pressed={amount === p}
+                    onClick={() => setAmountText(num(p))}
+                  >
+                    {num(p)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="group">
+              <div className="group-row">
+                <span className="group-label" id="make-mint-label">
+                  {t('make.mint.label')}
+                </span>
+                <div className="seg" role="group" aria-labelledby="make-mint-label">
+                  {(['test', 'real'] as MintChoice[]).map((m) => (
+                    <button key={m} type="button" aria-pressed={mintChoice === m} onClick={() => setMintChoice(m)}>
+                      {m === 'test' ? t('make.mint.test') : t('make.mint.real')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="group-row">
+                <span className="group-label">{t('make.size.label')}</span>
+                <span className="select">
+                  <select value={edge} onChange={(e) => setEdge(Number(e.target.value))}>
+                    {EDGES.map((e) => (
+                      <option key={e} value={e}>
+                        {e === 2048 ? t('make.size.original') : t('sticker.px', { size: e })}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronIcon size={16} />
+                </span>
+              </label>
+            </div>
+            <p className="group-caption">
+              {mintChoice === 'test' ? t('make.mint.testHint') : t('make.mint.realHint', { mint: mintHost(MINTS.real) })}
+            </p>
+
+            <button
+              type="button"
+              className="btn btn--primary btn--xl btn--block"
+              disabled={!photo || !amount || stage.k === 'quoting'}
+              onClick={pay}
+            >
+              {stage.k === 'quoting'
+                ? t('invoice.creating')
+                : !photo
+                  ? t('make.pay.needPhoto')
+                  : t('make.pay', { amount: amount ? num(amount) : '–' })}
+            </button>
+          </>
+        )}
+
+        {stage.k === 'invoice' && (
+          <InvoiceView pending={stage.pending} offline={offline} onCancel={() => void cancel(stage.pending)} />
+        )}
+
+        {(stage.k === 'minting' || stage.k === 'embedding') && (
+          <div className="tile working" role="status">
+            <span className="spinner" aria-hidden="true" />
+            <p className="working-title">{t('make.minting')}</p>
+          </div>
+        )}
+
+        {stage.k === 'needPhoto' && (
+          <>
+            <div className="tile notice">
+              <p className="notice-title">{t('make.needPhoto')}</p>
+              {stage.unsaved && <RawToken token={stage.saved.token} />}
+            </div>
+            <PhotoPicker photo={null} onFiles={choosePhoto} error={photoError} testId="make-photo-input" />
+          </>
+        )}
+
+        {stage.k === 'done' && <Done stage={stage} onAgain={reset} />}
+
+        {stage.k === 'issued' && (
+          <div className="tile notice">
+            <p className="notice-title">{t('invoice.issued')}</p>
+            <button type="button" className="btn btn--primary btn--block" onClick={reset}>
+              {t('make.done.again')}
+            </button>
+          </div>
+        )}
+
+        {stage.k === 'error' && (
+          <div className="tile notice" role="alert">
+            <p className="notice-title notice-title--bad">{stage.message}</p>
+            <div className="btn-row">
+              {stage.retry && (
+                <button type="button" className="btn btn--primary" onClick={stage.retry}>
+                  {t('make.retry')}
+                </button>
+              )}
+              <button type="button" className="btn btn--quiet" onClick={reset}>
+                {t('invoice.cancel')}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <SavedList
+        tokens={saved}
+        onPut={(tok) => {
+          setStage({ k: 'needPhoto', saved: tok, unsaved: false, edge })
+          card.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+        }}
+        onDelete={(id) => {
+          deleteToken(id)
+          setSaved(loadTokens())
+        }}
+      />
+    </section>
+  )
+}
+
+function errorText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
+function PhotoPicker({
+  photo,
+  onFiles,
+  error,
+  testId,
+}: {
+  photo: LoadedPhoto | null
+  onFiles: (files: File[]) => void
+  error: boolean
+  testId: string
+}) {
+  const { t } = useI18n()
+  const input = useRef<HTMLInputElement>(null)
+  return (
+    <div>
+      <button
+        type="button"
+        className={`picker${photo ? ' picker--has' : ''}`}
+        onClick={() => input.current?.click()}
+      >
+        {photo ? (
+          <>
+            <img src={photo.url} alt="" />
+            <span className="picker-change">{t('make.photo.change')}</span>
+          </>
+        ) : (
+          <>
+            <PhotoIcon size={30} className="picker-icon" />
+            <span className="picker-title">{t('make.step.photo')}</span>
+            <span className="picker-hint">{t('make.photo.dropHint')}</span>
+          </>
+        )}
+      </button>
+      {error && <p className="field-error">{t('pick.unreadable')}</p>}
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        hidden
+        data-testid={testId}
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? [])
+          e.target.value = ''
+          if (files.length) onFiles(files)
+        }}
+      />
+    </div>
+  )
+}
+
+function InvoiceView({ pending, offline, onCancel }: { pending: PendingQuote; offline: boolean; onCancel: () => void }) {
+  const { t, num } = useI18n()
+  const [qr, setQr] = useState<string | null>(null)
+  const [copied, flash] = useFlash()
+  useEffect(() => {
+    let live = true
+    QRCode.toDataURL(pending.request.toUpperCase(), { margin: 0, width: 560, errorCorrectionLevel: 'M' })
+      .then((url) => live && setQr(url))
+      .catch(() => live && setQr(null))
+    return () => {
+      live = false
+    }
+  }, [pending.request])
+  return (
+    <div className="tile invoice" data-testid="invoice">
+      <p className="invoice-title">{t('invoice.title')}</p>
+      <p className="invoice-amount">
+        {num(pending.amount)} <span>sats</span>
+      </p>
+      {isTestMint(pending.mint) && <p className="invoice-note">{t('token.testMint')}</p>}
+      <a className="qr" href={`lightning:${pending.request}`} aria-label={t('invoice.open')}>
+        {qr ? <img src={qr} alt="" /> : <span className="spinner" aria-hidden="true" />}
+      </a>
+      <p className="waiting" role="status">
+        <span className="spinner spinner--sm" aria-hidden="true" />
+        {offline ? t('invoice.offline') : t('invoice.waiting')}
+      </p>
+      <div className="stack">
+        <a className="btn btn--primary btn--block" href={`lightning:${pending.request}`}>
+          {t('invoice.open')}
+        </a>
+        <button
+          type="button"
+          className="btn btn--quiet btn--block"
+          onClick={async () => flash((await copyText(pending.request)) ? t('action.copied') : t('action.copyFailed'))}
+        >
+          <CopyIcon size={18} />
+          {copied ?? t('invoice.copy')}
+        </button>
+        <button type="button" className="btn btn--text" onClick={onCancel}>
+          {t('invoice.cancel')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgain: () => void }) {
+  const { t, num, bytes } = useI18n()
+  const [flash, setFlash] = useFlash()
+  const { made, saved, unsaved } = stage
+  const share = canShareFiles(made.file)
+  return (
+    <div className="done" data-testid="made-photo">
+      <div className="done-photo">
+        <img src={made.url} alt="" />
+        <span className="done-badge">{t('make.inside', { amount: num(saved.amount) })}</span>
+      </div>
+      <div className="tile done-card">
+        <p className="done-title">{t('make.done.title', { amount: num(saved.amount) })}</p>
+        <p className="done-facts">
+          <span>PNG</span> · <span>
+            {made.width}×{made.height}
+          </span> · <span>{bytes(made.file.size)}</span> · <span className="ok">
+            <CheckIcon size={14} /> {t('sticker.checked')}
+          </span>
+        </p>
+        <div className="stack">
+          <button
+            type="button"
+            className="btn btn--primary btn--xl btn--block"
+            onClick={() => downloadBlob(made.file, made.file.name)}
+          >
+            <DownloadIcon size={20} />
+            {t('action.download')}
+          </button>
+          {(share || canCopyImage()) && (
+            <div className="btn-row">
+              {share && (
+                <button type="button" className="btn btn--quiet" onClick={() => void shareFile(made.file)}>
+                  <ShareIcon size={18} />
+                  {t('action.share')}
+                </button>
+              )}
+              {canCopyImage() && (
+                <button
+                  type="button"
+                  className="btn btn--quiet"
+                  onClick={async () => setFlash((await copyPng(made.file)) ? t('action.copied') : t('action.copyFailed'))}
+                >
+                  <CopyIcon size={18} />
+                  {flash ?? t('action.copyImage')}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        <p className="done-tip">{t('make.done.tip')}</p>
+        <p className="done-warn">{t('bearer.warning')}</p>
+        {unsaved && <RawToken token={saved.token} />}
+      </div>
+      <button type="button" className="btn btn--text" onClick={onAgain}>
+        {t('make.done.again')}
+      </button>
+    </div>
+  )
+}
+
+function RawToken({ token }: { token: string }) {
+  const { t } = useI18n()
+  const [copied, flash] = useFlash()
+  return (
+    <div className="raw-token" role="alert">
+      <p>{t('make.storageFailed')}</p>
+      <textarea readOnly value={token} rows={3} onFocus={(e) => e.currentTarget.select()} />
+      <button
+        type="button"
+        className="btn btn--primary btn--block"
+        onClick={async () => flash((await copyText(token)) ? t('action.copied') : t('action.copyFailed'))}
+      >
+        {copied ?? t('token.copy')}
+      </button>
+    </div>
+  )
+}
+
+function SavedList({
+  tokens,
+  onPut,
+  onDelete,
+}: {
+  tokens: SavedToken[]
+  onPut: (t: SavedToken) => void
+  onDelete: (id: string) => void
+}) {
+  const { t } = useI18n()
+  if (!tokens.length) return null
+  return (
+    <div className="saved">
+      <h3>{t('saved.title')}</h3>
+      <ul className="group">
+        {tokens.map((tok) => (
+          <SavedItem key={tok.id} tok={tok} onPut={() => onPut(tok)} onDelete={() => onDelete(tok.id)} />
+        ))}
+      </ul>
+      <p className="group-caption">{t('saved.hint')}</p>
+    </div>
+  )
+}
+
+function SavedItem({ tok, onPut, onDelete }: { tok: SavedToken; onPut: () => void; onDelete: () => void }) {
+  const { t, num, lang } = useI18n()
+  const [claim, setClaim] = useState<ClaimState | 'checking' | 'unknown'>('checking')
+  const [armed, setArmed] = useState(false)
+  const [copied, flash] = useFlash()
+  useEffect(() => {
+    let live = true
+    checkClaimState(tok.token)
+      .then((s) => live && setClaim(s))
+      .catch(() => live && setClaim('unknown'))
+    return () => {
+      live = false
+    }
+  }, [tok.token])
+  const when = new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }).format(tok.createdAt)
+  return (
+    <li className="saved-item">
+      <div className="saved-row">
+        <strong>
+          {num(tok.amount)} <span>sats</span>
+        </strong>
+        <span className={`status status--${claim}`}>{claim === 'checking' ? t('state.checking') : t(`state.${claim}`)}</span>
+      </div>
+      <p className="saved-meta">
+        {when} · {mintHost(tok.mint)}
+        {isTestMint(tok.mint) && ` · ${t('make.mint.test')}`}
+      </p>
+      <div className="saved-actions">
+        <button type="button" className="link" onClick={onPut}>
+          {t('saved.put')}
+        </button>
+        <a className="link" href={`https://wallet.cashu.me/#token=${tok.token}`} target="_blank" rel="noopener noreferrer">
+          {t('saved.takeBack')}
+        </a>
+        <button
+          type="button"
+          className="link"
+          onClick={async () => flash((await copyText(tok.token)) ? t('action.copied') : t('action.copyFailed'))}
+        >
+          {copied ?? t('token.copy')}
+        </button>
+        <button
+          type="button"
+          className={`link link--danger${armed ? ' is-armed' : ''}`}
+          onClick={() => (armed ? onDelete() : setArmed(true))}
+          onBlur={() => setArmed(false)}
+        >
+          {armed ? t('saved.deleteConfirm') : t('saved.delete')}
+        </button>
+      </div>
+    </li>
+  )
+}

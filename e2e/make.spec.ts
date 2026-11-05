@@ -1,0 +1,68 @@
+import { expect, test } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
+import { TEST_MINT, makePhotoJpeg, paidTestQuote } from './helpers'
+
+test('make → pay (test mint) → download → open: intact and unclaimed', async ({ page }) => {
+  await page.goto('./')
+  const photo = await makePhotoJpeg(page, 2400, 1600)
+  await page.getByTestId('make-photo-input').setInputFiles({ name: 'lunch.jpg', mimeType: 'image/jpeg', buffer: photo })
+  await page.getByTestId('amount-input').fill('21')
+  await page.getByRole('button', { name: 'Pay 21 sats' }).click()
+
+  // The invoice is saved before it is shown.
+  await expect(page.getByTestId('invoice')).toBeVisible()
+  const pending = await page.evaluate(() => JSON.parse(localStorage.getItem('kakaonut.pending') ?? 'null'))
+  expect(pending).toMatchObject({ mint: TEST_MINT, amount: 21 })
+  expect(pending.request).toMatch(/^ln/)
+
+  const done = page.getByTestId('made-photo')
+  await expect(done).toBeVisible({ timeout: 45_000 })
+  await expect(done).toContainText('21 sats are hidden in your photo')
+
+  // The token was saved before it went into the photo; the pending invoice is gone.
+  const stored = await page.evaluate(() => ({
+    tokens: JSON.parse(localStorage.getItem('kakaonut.tokens') ?? '[]'),
+    pending: localStorage.getItem('kakaonut.pending'),
+  }))
+  expect(stored.pending).toBeNull()
+  expect(stored.tokens).toHaveLength(1)
+  expect(stored.tokens[0]).toMatchObject({ amount: 21, mint: TEST_MINT })
+
+  const [download] = await Promise.all([page.waitForEvent('download'), done.getByRole('button', { name: /Download/ }).click()])
+  expect(download.suggestedFilename()).toBe('kakaonut-21-sats.png')
+  const png = await readFile((await download.path())!)
+
+  await page.getByRole('link', { name: 'Open a photo' }).click()
+  await page.getByTestId('open-input').setInputFiles({ name: 'from-friend.png', mimeType: 'image/png', buffer: png })
+  await expect(page.locator('[data-verdict="intact"]')).toBeVisible()
+  await expect(page.locator('.token-num')).toHaveText('21')
+  await expect(page.getByTestId('claim-state')).toHaveText('Unclaimed')
+  await expect(page.getByRole('link', { name: 'Claim in cashu.me' })).toHaveAttribute(
+    'href',
+    `https://wallet.cashu.me/#token=${stored.tokens[0].token}`,
+  )
+})
+
+test('an invoice paid during a reload is resumed, minted and saved', async ({ page }) => {
+  const { quote, request } = await paidTestQuote(5)
+  await page.addInitScript(
+    (p) => {
+      if (!sessionStorage.getItem('seeded')) {
+        localStorage.setItem('kakaonut.pending', JSON.stringify(p))
+        sessionStorage.setItem('seeded', '1')
+      }
+    },
+    { mint: TEST_MINT, amount: 5, quote, request, createdAt: Date.now(), edge: 640 },
+  )
+  await page.goto('./')
+  // No photo survived the reload, so it asks for one; the sats are already saved.
+  await expect(page.getByText('Paid! Your bitcoin is saved. Choose a photo to put it in.')).toBeVisible({ timeout: 30_000 })
+  const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('kakaonut.tokens') ?? '[]'))
+  expect(tokens).toHaveLength(1)
+  expect(await page.evaluate(() => localStorage.getItem('kakaonut.pending'))).toBeNull()
+
+  const photo = await makePhotoJpeg(page, 1200, 900)
+  await page.getByTestId('make-photo-input').setInputFiles({ name: 'p.jpg', mimeType: 'image/jpeg', buffer: photo })
+  await expect(page.getByTestId('made-photo')).toContainText('5 sats are hidden in your photo')
+  await expect(page.locator('.saved-item')).toHaveCount(1)
+})

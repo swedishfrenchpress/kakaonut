@@ -1,26 +1,21 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { Bot, Me, SysChip, Thread, Typing } from '../components/Chat'
+import { Bot, Me, SysChip, Thread } from '../components/Chat'
 import { Composer, DropOverlay } from '../components/Composer'
 import { useI18n, type Key } from '../i18n'
-import { useDropImages, useFlash, usePasteImages } from '../hooks'
+import { useDropImages, usePasteImages } from '../hooks'
 import { readStickerInWorker } from '../workerClient'
 import type { StickerReadResult } from '../read'
 import { FORMAT_NAMES } from '../imageInfo'
 import { isTestPayload, parseTestPayload, type TestPayloadInfo } from '../testPayload'
-import { checkClaimState, mintHost, summarizeToken, type ClaimState, type TokenSummary } from '../mint'
-import { canReadClipboardImages, copyText, readClipboardImage } from '../actions'
+import { checkClaimState, summarizeToken, type TokenSummary } from '../mint'
+import { ClaimCard, type TokenCheck } from '../components/ClaimCard'
+import { loadBtcPrice } from '../price'
+import { canReadClipboardImages, readClipboardImage } from '../actions'
 import { CopyIcon, PhotoIcon } from '../components/Icons'
 
 /**
- * Open: reads any image and says what's in it. Also the Phase 0 instrument, so it keeps a thread
- * of every image opened and can copy them all as a results table.
+ * Open: reads any image and says what's in it. Keeps a thread of every image opened this visit.
  */
-
-interface TokenCheck {
-  summary?: TokenSummary
-  invalid?: boolean
-  claim: 'checking' | ClaimState | 'unknown'
-}
 
 interface Entry {
   id: number
@@ -34,13 +29,10 @@ interface Entry {
 }
 
 export function OpenScreen({ active }: { active: boolean }) {
-  const { t, bytes } = useI18n()
+  const { t } = useI18n()
   const [entries, setEntries] = useState<Entry[]>([])
   const [notice, setNotice] = useState<string | null>(null)
-  const [copied, flashCopied] = useFlash()
   const nextId = useRef(0)
-  // Bumped by Clear. Work started before a Clear never writes into the new thread.
-  const generation = useRef(0)
   const urls = useRef<string[]>([])
 
   useEffect(
@@ -50,31 +42,30 @@ export function OpenScreen({ active }: { active: boolean }) {
     [],
   )
 
-  const update = (gen: number, id: number, patch: (e: Entry) => Partial<Entry>) => {
-    if (gen !== generation.current) return
+  const update = (id: number, patch: (e: Entry) => Partial<Entry>) => {
     setEntries((es) => es.map((e) => (e.id === id ? { ...e, ...patch(e) } : e)))
   }
 
-  const checkToken = async (gen: number, id: number, token: string) => {
+  const checkToken = async (id: number, token: string) => {
+    void loadBtcPrice().catch(() => {}) // so the amount can show in dollars or won right away
     let summary: TokenSummary
     try {
       summary = await summarizeToken(token)
     } catch {
-      return update(gen, id, () => ({ token: { claim: 'unknown', invalid: true } }))
+      return update(id, () => ({ token: { claim: 'unknown', invalid: true } }))
     }
-    update(gen, id, () => ({ token: { summary, claim: 'checking' } }))
+    update(id, () => ({ token: { summary, claim: 'checking' } }))
     let claim: TokenCheck['claim']
     try {
       claim = await checkClaimState(token)
     } catch {
       claim = 'unknown'
     }
-    update(gen, id, (e) => ({ token: { ...e.token, summary, claim } }))
+    update(id, (e) => ({ token: { ...e.token, summary, claim } }))
   }
 
   const open = async (files: File[]) => {
     setNotice(null)
-    const gen = generation.current
     const fresh: Entry[] = files.map((f) => {
       const url = URL.createObjectURL(f)
       urls.current.push(url)
@@ -89,26 +80,18 @@ export function OpenScreen({ active }: { active: boolean }) {
       try {
         result = await readStickerInWorker(file)
       } catch (e) {
-        update(gen, id, () => ({ reading: false, error: e instanceof Error ? e.message : String(e) }))
+        update(id, () => ({ reading: false, error: e instanceof Error ? e.message : String(e) }))
         continue
       }
       const realToken = result.ok && !isTestPayload(result.token)
-      update(gen, id, () => ({
+      update(id, () => ({
         reading: false,
         result,
         test: result.ok ? parseTestPayload(result.token) : null,
         token: realToken ? { claim: 'checking' } : undefined,
       }))
-      if (result.ok && realToken) void checkToken(gen, id, result.token)
+      if (result.ok && realToken) void checkToken(id, result.token)
     }
-  }
-
-  const clear = () => {
-    generation.current++
-    urls.current.forEach((u) => URL.revokeObjectURL(u))
-    urls.current = []
-    setEntries([])
-    setNotice(null)
   }
 
   const pasteFromButton = async () => {
@@ -118,32 +101,12 @@ export function OpenScreen({ active }: { active: boolean }) {
     else void open([got])
   }
 
-  const copyResults = async () => {
-    const head = [t('results.file'), t('results.format'), t('results.pixels'), t('results.bytes'), t('results.result'), t('results.madeAt')]
-    const rows = entries
-      .filter((e) => !e.reading)
-      .map((e) => {
-        const r = e.result
-        return [
-          e.name.replace(/\|/g, '/'),
-          r ? formatName(r.format, t) : '',
-          r?.width ? `${r.width}×${r.height}` : '',
-          r ? bytes(r.size) : '',
-          shortVerdict(e, t),
-          e.test ? `${e.test.width}×${e.test.height}` : '',
-        ]
-      })
-    const md = [head, head.map(() => '---'), ...rows].map((r) => `| ${r.join(' | ')} |`).join('\n')
-    flashCopied((await copyText(md)) ? t('action.copied') : t('action.copyFailed'))
-  }
-
   usePasteImages((files) => void open(files), active)
   const dragging = useDropImages((files) => void open(files), active)
 
   return (
     <>
       <Thread>
-        <SysChip>{t('open.notice')}</SysChip>
         <Bot head>
           {t('open.hello')}
         </Bot>
@@ -155,24 +118,13 @@ export function OpenScreen({ active }: { active: boolean }) {
               <Thumb entry={e} />
               <span className="media-caption">{e.name}</span>
             </Me>
-            <Bot head busy={e.reading} typing={0} scrollIntoView>
+            <Bot head busy={e.reading} typing={0} scrollIntoView bare={isMoney(e)}>
               <Verdict entry={e} />
             </Bot>
           </Fragment>
         ))}
 
         {notice && <SysChip>{notice}</SysChip>}
-
-        {entries.length > 0 && (
-          <div className="thread-tools">
-            <button type="button" className="btn btn--soft btn--sm" onClick={copyResults}>
-              {copied ?? t('open.copyResults')}
-            </button>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={clear}>
-              {t('open.clear')}
-            </button>
-          </div>
-        )}
       </Thread>
 
       {active && <DropOverlay show={dragging} label={t('drop.overlay')} />}
@@ -180,7 +132,6 @@ export function OpenScreen({ active }: { active: boolean }) {
         label={t('pick.chooseImage')}
         icon={<PhotoIcon size={20} />}
         multiple
-        hint={t('pick.orDrop')}
         onFiles={(files) => void open(files)}
         testId="open-input"
       >
@@ -201,14 +152,15 @@ function formatName(format: StickerReadResult['format'], t: T): string {
   return format === 'unknown' ? t('format.unknown') : FORMAT_NAMES[format]
 }
 
+/** A photo with bitcoin in it: the money card is shown on its own, without a chat bubble. */
+function isMoney(e: Entry): boolean {
+  return !!(e.result?.ok && e.token?.summary && !e.token.invalid)
+}
+
 function verdictKey(e: Entry): 'intact' | 'repaired' | 'damaged' | 'none' | 'erased' | 'unreadable' {
   const r = e.result
   if (!r || e.error) return 'unreadable'
   return r.ok ? r.status : r.reason
-}
-
-function shortVerdict(e: Entry, t: T): string {
-  return t(`verdict.short.${verdictKey(e)}` as Key)
 }
 
 function Thumb({ entry }: { entry: Entry }) {
@@ -233,11 +185,13 @@ function warningText(w: string, t: T): string {
 function Facts({ r, bad }: { r: StickerReadResult; bad?: boolean }) {
   const { t, bytes } = useI18n()
   return (
-    <div className="chips" data-testid="facts">
-      <span className={`chip${bad ? ' chip--bad' : ''}`}>{formatName(r.format, t)}</span>
-      <span className="chip">{r.width ? `${r.width}×${r.height}` : t('facts.dimsUnknown')}</span>
-      <span className="chip">{bytes(r.size)}</span>
-    </div>
+    <p className="facts-line" data-testid="facts">
+      <span className={bad ? 'is-bad' : undefined}>{formatName(r.format, t)}</span>
+      <span aria-hidden="true"> · </span>
+      <span>{r.width ? `${r.width}×${r.height}` : t('facts.dimsUnknown')}</span>
+      <span aria-hidden="true"> · </span>
+      <span>{bytes(r.size)}</span>
+    </p>
   )
 }
 
@@ -266,9 +220,7 @@ function Verdict({ entry: e }: { entry: Entry }) {
   if (r.ok && e.token) {
     return (
       <div data-verdict={key}>
-        <TokenFound token={r.token} check={e.token} status={r.status} />
-        <Facts r={r} />
-        {warnings}
+        <ClaimCard token={r.token} check={e.token} />
       </div>
     )
   }
@@ -287,50 +239,6 @@ function Verdict({ entry: e }: { entry: Entry }) {
       {e.test && <p className="test-line">{t('test.found', { w: e.test.width, h: e.test.height })}</p>}
       <Facts r={r} bad={key === 'erased' || key === 'damaged'} />
       {warnings}
-    </div>
-  )
-}
-
-function TokenFound({ token, check, status }: { token: string; check: TokenCheck; status: 'intact' | 'repaired' }) {
-  const { t, num } = useI18n()
-  const [copied, flash] = useFlash()
-  if (check.invalid) return <p className="lead">{t('token.invalid')}</p>
-  if (!check.summary) return <Typing />
-  const { amount, mint } = check.summary
-  const isTestMint = /testnut/i.test(mint)
-  return (
-    <div className="token">
-      <p className="token-amount">
-        <span className="token-num">{num(amount)}</span> <span className="token-unit">sats</span>
-      </p>
-      <p className="muted small">
-        {t(`verdict.${status}.title`)} · {t('token.mint', { mint: mintHost(mint) })}
-      </p>
-      {isTestMint && <p className="tag tag--test">{t('token.testMint')}</p>}
-      <p className={`claim claim--${check.claim}`} data-testid="claim-state">
-        {check.claim === 'checking' ? t('state.checking') : t(`state.${check.claim}`)}
-      </p>
-      <a
-        className="btn btn--primary btn--block"
-        href={`https://wallet.cashu.me/#token=${token}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {t('token.claim')}
-      </a>
-      <div className="btn-row">
-        <a className="btn btn--soft btn--sm" href={`cashu:${token}`}>
-          {t('token.openWallet')}
-        </a>
-        <button
-          type="button"
-          className="btn btn--soft btn--sm"
-          onClick={async () => flash((await copyText(token)) ? t('action.copied') : t('action.copyFailed'))}
-        >
-          {copied ?? t('token.copy')}
-        </button>
-      </div>
-      <p className="warn">{t('bearer.warning')}</p>
     </div>
   )
 }

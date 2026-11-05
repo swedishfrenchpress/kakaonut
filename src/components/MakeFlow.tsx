@@ -5,20 +5,22 @@ import { useDropImages, useFlash, usePasteImages } from '../hooks'
 import { loadPhoto, photoToPixels, type LoadedPhoto } from '../photo'
 import { makeStickerInWorker } from '../workerClient'
 import {
-  MINTS,
+  MINT_URL,
   checkClaimState,
   createInvoice,
   invoiceState,
   isTestMint,
-  mintHost,
+  mintName,
   mintToken,
   type ClaimState,
-  type MintChoice,
 } from '../mint'
+import { claimLink } from '../config'
+import { clearPendingPhoto, loadPendingPhoto, savePendingPhoto } from '../photoStore'
 import { addToken, clearPending, deleteToken, loadPending, loadTokens, savePending, type PendingQuote, type SavedToken } from '../wallet'
 import { canCopyImage, canShareFiles, copyPng, copyText, downloadBlob, shareFile } from '../actions'
 import { DropOverlay } from './Composer'
 import { Burst } from './Burst'
+import { Buddies, Loading } from './Buddies'
 import { CheckIcon, ChevronIcon, CopyIcon, DownloadIcon, PhotoIcon, ShareIcon } from './Icons'
 
 /**
@@ -34,7 +36,8 @@ type Stage =
   | { k: 'quoting' }
   | { k: 'invoice'; pending: PendingQuote }
   | { k: 'minting'; amount: number }
-  | { k: 'needPhoto'; saved: SavedToken; unsaved: boolean; edge: number }
+  /** 'lost': paid, but the page reloaded and the photo couldn't be recovered. 'put': a saved token. */
+  | { k: 'needPhoto'; saved: SavedToken; unsaved: boolean; edge: number; why: 'lost' | 'put' }
   | { k: 'embedding'; saved: SavedToken }
   | { k: 'done'; saved: SavedToken; made: Made; unsaved: boolean }
   | { k: 'issued' }
@@ -56,7 +59,6 @@ export function MakeFlow({ active }: { active: boolean }) {
   const [photo, setPhoto] = useState<LoadedPhoto | null>(null)
   const [photoError, setPhotoError] = useState(false)
   const [amountText, setAmountText] = useState('1,000')
-  const [mintChoice, setMintChoice] = useState<MintChoice>('test')
   const [edge, setEdge] = useState(2048)
   const [stage, setStage] = useState<Stage>(() => {
     const pending = loadPending()
@@ -66,6 +68,8 @@ export function MakeFlow({ active }: { active: boolean }) {
   const [saved, setSaved] = useState<SavedToken[]>(loadTokens)
   const photoRef = useRef(photo)
   photoRef.current = photo
+  /** The file behind `photo`, kept so it can be stored while its invoice is paid. */
+  const photoFile = useRef<Blob | null>(null)
   const madeUrls = useRef<string[]>([])
   const card = useRef<HTMLDivElement>(null)
 
@@ -78,7 +82,7 @@ export function MakeFlow({ active }: { active: boolean }) {
   )
 
   const amount = parseAmount(amountText)
-  const mintUrl = MINTS[mintChoice]
+  const mintUrl = MINT_URL
 
   const choosePhoto = async (files: File[]) => {
     const file = files[0]
@@ -87,6 +91,7 @@ export function MakeFlow({ active }: { active: boolean }) {
       const next = await loadPhoto(file)
       photoRef.current?.release()
       setPhoto(next)
+      photoFile.current = file
       setPhotoError(false)
       if (stage.k === 'needPhoto') void embed(stage.saved, next, stage.edge, stage.unsaved)
     } catch {
@@ -108,7 +113,7 @@ export function MakeFlow({ active }: { active: boolean }) {
       setStage({
         k: 'error',
         message: t('make.error', { error: errorText(e) }),
-        retry: () => setStage({ k: 'needPhoto', saved: tok, unsaved, edge: size }),
+        retry: () => setStage({ k: 'needPhoto', saved: tok, unsaved, edge: size, why: 'put' }),
       })
     }
   }
@@ -127,8 +132,22 @@ export function MakeFlow({ active }: { active: boolean }) {
     const stored = addToken(tok) // saved before anything else happens to it
     clearPending()
     setSaved(stored ? loadTokens() : (list) => [tok, ...list])
-    const current = photoRef.current
-    if (!current) setStage({ k: 'needPhoto', saved: tok, unsaved: !stored, edge: pending.edge })
+    // The page may have reloaded while the invoice was paid (common on phones): get the photo back.
+    let current = photoRef.current
+    if (!current) {
+      const kept = await loadPendingPhoto(pending.quote)
+      if (kept) {
+        try {
+          current = await loadPhoto(kept)
+          photoFile.current = kept
+          setPhoto(current)
+        } catch {
+          current = null
+        }
+      }
+    }
+    void clearPendingPhoto()
+    if (!current) setStage({ k: 'needPhoto', saved: tok, unsaved: !stored, edge: pending.edge, why: 'lost' })
     else await embed(tok, current, pending.edge, !stored)
   }
 
@@ -151,6 +170,7 @@ export function MakeFlow({ active }: { active: boolean }) {
         if (state === 'ISSUED') {
           stopped = true
           clearPending()
+          void clearPendingPhoto()
           setSaved(loadTokens())
           setStage({ k: 'issued' })
           return
@@ -174,6 +194,7 @@ export function MakeFlow({ active }: { active: boolean }) {
       const inv = await createInvoice(mintUrl, amount)
       const pending: PendingQuote = { mint: mintUrl, amount, quote: inv.quote, request: inv.request, createdAt: Date.now(), edge }
       savePending(pending) // before the invoice is shown
+      if (photoFile.current) await savePendingPhoto(pending.quote, photoFile.current)
       setStage({ k: 'invoice', pending })
     } catch (e) {
       setStage({ k: 'error', message: t('make.error', { error: errorText(e) }), retry: () => setStage({ k: 'form' }) })
@@ -188,6 +209,7 @@ export function MakeFlow({ active }: { active: boolean }) {
       // can't tell: keep it simple and cancel
     }
     clearPending()
+    void clearPendingPhoto()
     setStage({ k: 'form' })
   }
 
@@ -261,18 +283,6 @@ export function MakeFlow({ active }: { active: boolean }) {
             </div>
 
             <div className="group">
-              <div className="group-row">
-                <span className="group-label" id="make-mint-label">
-                  {t('make.mint.label')}
-                </span>
-                <div className="seg" role="group" aria-labelledby="make-mint-label">
-                  {(['test', 'real'] as MintChoice[]).map((m) => (
-                    <button key={m} type="button" aria-pressed={mintChoice === m} onClick={() => setMintChoice(m)}>
-                      {m === 'test' ? t('make.mint.test') : t('make.mint.real')}
-                    </button>
-                  ))}
-                </div>
-              </div>
               <label className="group-row">
                 <span className="group-label">{t('make.size.label')}</span>
                 <span className="select">
@@ -287,16 +297,15 @@ export function MakeFlow({ active }: { active: boolean }) {
                 </span>
               </label>
             </div>
-            <p className="group-caption">
-              {mintChoice === 'test' ? t('make.mint.testHint') : t('make.mint.realHint', { mint: mintHost(MINTS.real) })}
-            </p>
 
             <button
               type="button"
-              className="btn btn--primary btn--xl btn--block"
+              className={`btn btn--primary btn--xl btn--block${stage.k === 'quoting' ? ' is-busy' : ''}`}
               disabled={!photo || !amount || stage.k === 'quoting'}
+              aria-busy={stage.k === 'quoting'}
               onClick={pay}
             >
+              {stage.k === 'quoting' && <Buddies size={22} />}
               {stage.k === 'quoting'
                 ? t('invoice.creating')
                 : !photo
@@ -311,16 +320,17 @@ export function MakeFlow({ active }: { active: boolean }) {
         )}
 
         {(stage.k === 'minting' || stage.k === 'embedding') && (
-          <div className="tile working" role="status">
-            <span className="spinner" aria-hidden="true" />
-            <p className="working-title">{t('make.minting')}</p>
+          <div className="tile working">
+            <Loading label={t('make.minting')} size={44} layout="column" />
           </div>
         )}
 
         {stage.k === 'needPhoto' && (
           <>
             <div className="tile notice">
-              <p className="notice-title">{t('make.needPhoto')}</p>
+              <p className="notice-title">
+                {stage.why === 'lost' ? t('make.needPhoto') : t('make.putPhoto', { amount: num(stage.saved.amount) })}
+              </p>
               {stage.unsaved && <RawToken token={stage.saved.token} />}
             </div>
             <PhotoPicker photo={null} onFiles={choosePhoto} error={photoError} testId="make-photo-input" />
@@ -358,7 +368,7 @@ export function MakeFlow({ active }: { active: boolean }) {
       <SavedList
         tokens={saved}
         onPut={(tok) => {
-          setStage({ k: 'needPhoto', saved: tok, unsaved: false, edge })
+          setStage({ k: 'needPhoto', saved: tok, unsaved: false, edge, why: 'put' })
           card.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
         }}
         onDelete={(id) => {
@@ -445,24 +455,23 @@ function InvoiceView({ pending, offline, onCancel }: { pending: PendingQuote; of
       </p>
       {isTestMint(pending.mint) && <p className="invoice-note">{t('token.testMint')}</p>}
       <a className="qr" href={`lightning:${pending.request}`} aria-label={t('invoice.open')}>
-        {qr ? <img src={qr} alt="" /> : <span className="spinner" aria-hidden="true" />}
+        {qr ? <img src={qr} alt="" /> : <Buddies size={30} />}
       </a>
-      <p className="waiting" role="status">
-        <span className="spinner spinner--sm" aria-hidden="true" />
-        {offline ? t('invoice.offline') : t('invoice.waiting')}
-      </p>
+      <Loading className="waiting" label={offline ? t('invoice.offline') : t('invoice.waiting')} size={20} />
       <div className="stack">
-        <a className="btn btn--primary btn--block" href={`lightning:${pending.request}`}>
-          {t('invoice.open')}
-        </a>
-        <button
-          type="button"
-          className="btn btn--quiet btn--block"
-          onClick={async () => flash((await copyText(pending.request)) ? t('action.copied') : t('action.copyFailed'))}
-        >
-          <CopyIcon size={18} />
-          {copied ?? t('invoice.copy')}
-        </button>
+        <div className="invoice-buttons">
+          <a className="btn btn--primary" href={`lightning:${pending.request}`}>
+            {t('invoice.open')}
+          </a>
+          <button
+            type="button"
+            className="btn btn--quiet"
+            onClick={async () => flash((await copyText(pending.request)) ? t('action.copied') : t('action.copyFailed'))}
+          >
+            <CopyIcon size={18} />
+            {copied ?? t('invoice.copy')}
+          </button>
+        </div>
         <button type="button" className="btn btn--text" onClick={onCancel}>
           {t('invoice.cancel')}
         </button>
@@ -522,7 +531,6 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
           )}
         </div>
         <p className="done-tip">{t('make.done.tip')}</p>
-        <p className="done-warn">{t('bearer.warning')}</p>
         {unsaved && <RawToken token={saved.token} />}
       </div>
       <button type="button" className="btn btn--text" onClick={onAgain}>
@@ -598,14 +606,14 @@ function SavedItem({ tok, onPut, onDelete }: { tok: SavedToken; onPut: () => voi
         <span className={`status status--${claim}`}>{claim === 'checking' ? t('state.checking') : t(`state.${claim}`)}</span>
       </div>
       <p className="saved-meta">
-        {when} · {mintHost(tok.mint)}
+        {when} · {mintName(tok.mint)}
         {isTestMint(tok.mint) && ` · ${t('make.mint.test')}`}
       </p>
       <div className="saved-actions">
         <button type="button" className="link" onClick={onPut}>
           {t('saved.put')}
         </button>
-        <a className="link" href={`https://wallet.cashu.me/#token=${tok.token}`} target="_blank" rel="noopener noreferrer">
+        <a className="link" href={claimLink(tok.token)} target="_blank" rel="noopener noreferrer">
           {t('saved.takeBack')}
         </a>
         <button

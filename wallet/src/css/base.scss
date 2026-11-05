@@ -461,6 +461,27 @@ body.body--light[data-theme="kakaonut"] {
     color: $kn-ink;
   }
 
+  // Receive Ecash (where "Claim in Kakaonut" lands): the token card's amount and mint name are
+  // white, and the card and bottom bar carry shadows.
+  .token-card {
+    background: #f6f6f6 !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none;
+  }
+  .token-card .mint-name {
+    color: #6e6e73;
+  }
+  .token-card .token-amount {
+    color: $kn-ink;
+  }
+  .bottom-panel {
+    box-shadow: none;
+  }
+  .tool-tip-info-text {
+    color: #3a3a3c;
+  }
+
   // Add-mint and swap sections were written for a dark page.
   .divider-line {
     background-color: #ececec;

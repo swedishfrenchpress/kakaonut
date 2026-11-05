@@ -38,6 +38,10 @@ Built for bitcoin++ Seoul, privacy edition.
    decodes the PNG itself, finds the hidden ecash, checks it with the mint, and shows the amount
    with a scan animation. **Claim** swaps the ecash for fresh tokens in the friend's wallet, so the
    photo is now empty: anyone who opens it later sees "already claimed".
+5. **Or straight to Lightning.** On the site's Open page the friend can instead type a Lightning
+   address. The browser looks up the address, gets an invoice for the photo's amount, and asks the
+   mint to pay it with the photo's ecash ("melting"). The mint's fee comes out of the amount and any
+   unused fee reserve comes back as ecash. If the payment fails, nothing is spent.
 
 ### Hidden-data format
 
@@ -55,8 +59,9 @@ The site and the wallet share this format and the same code (`src/stego.ts`, `sr
 
 ### Privacy
 
-- **No backend.** The site is static: no accounts, no analytics, fonts are self-hosted. The only
-  network requests go to the Cashu mint.
+- **No backend.** The site is static: no accounts, no analytics, fonts are self-hosted. Network
+  requests go to the Cashu mint, and to Coinbase for the bitcoin price when a photo with bitcoin in
+  it is opened (to show the amount in dollars or won).
 - **The mint can't link payer and receiver.** Cashu uses blind signatures: the mint signs tokens
   without seeing them, so it can't connect the person who paid the invoice to the person who
   claims the photo.
@@ -76,12 +81,15 @@ The site and the wallet share this format and the same code (`src/stego.ts`, `sr
 **The site** has three pages:
 
 - **Make** (home): an animated KakaoTalk chat shows the idea, then choose a photo → amount → Pay →
-  Lightning invoice → your photo with the bitcoin inside, with Download, Share and Copy. "Test" money
-  (the default) uses a test mint where the invoice pays itself; "Real" uses the Minibits mint. The
-  invoice is saved before it's shown and picked up again after a reload, and the ecash is saved on
-  the device before it goes into the photo, so a crash or a closed tab doesn't lose the money.
+  Lightning invoice → your photo with the bitcoin inside, with Download, Share and Copy. Photos hold
+  real bitcoin, through the Minibits mint. The invoice is saved before it's shown and picked up
+  again after a reload, and the ecash is saved on the device before it goes into the photo, so a
+  crash or a closed tab doesn't lose the money.
 - **Open** (footer link): checks any image and says what's inside: amount, mint, whether it's been
-  claimed, or why nothing could be read.
+  claimed, or why nothing could be read. If there's bitcoin inside it shows a money message: the
+  amount in dollars (won in Korean) with sats underneath, then **Claim in Kakaonut** (opens the
+  wallet with it), **Copy** (the ecash token) and **Send to Lightning** (pays a Lightning address
+  from the browser; works with providers that allow requests from websites, which most do).
 - **KakaoTalk test** (footer link): makes three test photos with fake data (no money) to check
   which ways of sending through KakaoTalk keep the hidden bits. Results so far are in
   [`KAKAOTALK_RESULTS.md`](KAKAOTALK_RESULTS.md).
@@ -101,6 +109,7 @@ npm run dev          # http://localhost:5173
 npm run dev:lan      # also on your Wi-Fi, for phones (http only: no Share or clipboard buttons)
 npm test             # unit tests (vitest)
 npm run e2e          # Playwright end-to-end tests (needs network for the test mint)
+                     # e2e builds with VITE_TEST_MINT=1, so tests use fake test-mint bitcoin
 npm run build        # static site in dist/
 ```
 
@@ -131,6 +140,9 @@ One repo, two Vercel projects:
 | Site | `/` | kakaonut.com | Vite preset (build `npm run build`, output `dist`) |
 | Wallet | `wallet/` | wallet.kakaonut.com | from `wallet/vercel.json` (build `npm run build:pwa`, output `dist/pwa`) |
 
+"Claim in Kakaonut" links to `https://kakaonut-wallet.vercel.app` until the domain is set up. Set
+`VITE_WALLET_URL` on the site project (for example `https://wallet.kakaonut.com`) to change it.
+
 ## Code map
 
 ```
@@ -140,7 +152,10 @@ src/
   sticker.ts             hide a token in pixels → encode PNG → read it back to check
   photo.ts               photo → resized RGB pixels
   imageInfo.ts           format and pixel size from the file's first bytes
-  mint.ts                Cashu mint calls (cashu-ts): invoice, mint, claim state
+  mint.ts                Cashu mint calls (cashu-ts): invoice, mint, claim state, pay a Lightning address
+  lightning.ts           Lightning address → invoice (LUD-16 / LNURL-pay)
+  config.ts              where "Claim in Kakaonut" points
+  price.ts               bitcoin price for dollars / won
   wallet.ts              pending invoice and saved tokens (localStorage)
   worker.ts              heavy pixel work off the main thread
   i18n/                  English and Korean

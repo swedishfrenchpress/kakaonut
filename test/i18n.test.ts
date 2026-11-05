@@ -23,7 +23,7 @@ describe('dictionaries', () => {
   })
 
   it('keep "sats" as the unit next to amounts, in both languages', () => {
-    expect(ko['token.title']).toContain('{amount} sats')
+    expect(ko['ln.change']).toContain('{amount} sats')
     expect(ko['make.pay']).toContain('{amount} sats')
     expect(en['chat.pop']).toBe('+{amount} sats')
   })
@@ -31,8 +31,8 @@ describe('dictionaries', () => {
 
 describe('translate', () => {
   it('fills named placeholders', () => {
-    expect(translate('en', 'token.title', { amount: '1,000' })).toBe('Found 1,000 sats\u00A0🎁')
-    expect(translate('ko', 'token.title', { amount: '1,000' })).toBe('1,000 sats를 찾았어요\u00A0🎁')
+    expect(translate('en', 'ln.change', { amount: '1,000' })).toBe('Claim the 1,000 sats left over')
+    expect(translate('ko', 'ln.change', { amount: '1,000' })).toBe('남은 1,000 sats 받기')
   })
 
   it('keeps a trailing emoji on the same line as the word before it', () => {

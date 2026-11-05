@@ -2,6 +2,8 @@ import type { Page } from '@playwright/test'
 import { Wallet, getEncodedToken } from '@cashu/cashu-ts'
 
 export const TEST_MINT = 'https://testnut.cashu.space'
+/** Where "Claim in Kakaonut" points (src/config.ts). */
+export const WALLET_URL = 'https://kakaonut-wallet.vercel.app'
 
 /** A photo-like JPEG (gradients, shapes, noise), drawn in the page so no binary fixture is needed. */
 export async function makePhotoJpeg(page: Page, width: number, height: number): Promise<Buffer> {

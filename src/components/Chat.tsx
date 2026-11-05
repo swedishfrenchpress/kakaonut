@@ -37,6 +37,8 @@ interface BotProps {
   /** Keep showing the typing dots (e.g. while work is running). */
   busy?: boolean
   card?: boolean
+  /** No bubble around the content: it's its own bubble (the money card). */
+  bare?: boolean
   scrollIntoView?: boolean
   className?: string
 }
@@ -49,6 +51,7 @@ export function Bot({
   typing = 450,
   busy = false,
   card = false,
+  bare = false,
   scrollIntoView = false,
   className = '',
 }: BotProps) {
@@ -85,7 +88,7 @@ export function Bot({
       <div className="msg-body">
         {head && <div className="msg-name">{t('app.name')}</div>}
         {visible ? (
-          <div className={`bubble bubble--bot${card ? ' bubble--card' : ''} ${className}`}>{children}</div>
+          <div className={`bubble bubble--bot${card ? ' bubble--card' : ''}${bare ? ' bubble--bare' : ''} ${className}`}>{children}</div>
         ) : (
           <div className="bubble bubble--bot bubble--typing">
             <Typing />

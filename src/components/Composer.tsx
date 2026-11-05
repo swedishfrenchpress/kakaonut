@@ -7,7 +7,6 @@ export function Composer({
   icon,
   multiple = false,
   onFiles,
-  hint,
   children,
   testId,
 }: {
@@ -15,7 +14,6 @@ export function Composer({
   icon: ReactNode
   multiple?: boolean
   onFiles: (files: File[]) => void
-  hint?: string
   children?: ReactNode
   testId?: string
 }) {
@@ -23,7 +21,7 @@ export function Composer({
   return (
     <div className="composer">
       <div className="composer-inner">
-        <button type="button" className="btn btn--primary btn--grow" onClick={() => input.current?.click()}>
+        <button type="button" className="btn btn--primary" onClick={() => input.current?.click()}>
           <span className="btn-icon" aria-hidden="true">
             {icon}
           </span>
@@ -44,7 +42,6 @@ export function Composer({
           }}
         />
       </div>
-      {hint && <p className="composer-hint">{hint}</p>}
     </div>
   )
 }

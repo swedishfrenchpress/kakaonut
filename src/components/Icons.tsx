@@ -59,6 +59,12 @@ export const CheckIcon = (p: P) => (
   </Svg>
 )
 
+export const BoltIcon = (p: P) => (
+  <Svg {...p}>
+    <path d="M13.2 3.5 5.5 13.4h6l-1 7.1 7.7-9.9h-6z" />
+  </Svg>
+)
+
 export const ChevronIcon = (p: P) => (
   <Svg {...p}>
     <path d="m8 10 4 4 4-4" />

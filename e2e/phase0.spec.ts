@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
-import { makePhotoJpeg, mintTestToken, reencodeAsJpeg } from './helpers'
+import { WALLET_URL, makePhotoJpeg, mintTestToken, reencodeAsJpeg } from './helpers'
 import { makeStickerPng } from '../src/sticker'
 import type { Pixels } from '../src/stego'
 
@@ -75,8 +75,8 @@ test('a real test-mint token hidden in a PNG shows the amount and "Unclaimed"', 
   await expect(page.locator('[data-verdict="intact"]')).toBeVisible()
   await expect(page.locator('.token-num')).toHaveText('21')
   await expect(page.getByTestId('claim-state')).toHaveText('Unclaimed')
-  await expect(page.getByRole('link', { name: 'Claim in cashu.me' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Claim in Kakaonut' })).toHaveAttribute(
     'href',
-    `https://wallet.cashu.me/#token=${token}`,
+    `${WALLET_URL}/#token=${token}`,
   )
 })

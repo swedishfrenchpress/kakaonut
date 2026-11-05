@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
-import { TEST_MINT, makePhotoJpeg, paidTestQuote } from './helpers'
+import { TEST_MINT, WALLET_URL, makePhotoJpeg, paidTestQuote } from './helpers'
 
 test('make → pay (test mint) → download → open: intact and unclaimed', async ({ page }) => {
   await page.goto('./')
@@ -37,9 +37,9 @@ test('make → pay (test mint) → download → open: intact and unclaimed', asy
   await expect(page.locator('[data-verdict="intact"]')).toBeVisible()
   await expect(page.locator('.token-num')).toHaveText('21')
   await expect(page.getByTestId('claim-state')).toHaveText('Unclaimed')
-  await expect(page.getByRole('link', { name: 'Claim in cashu.me' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Claim in Kakaonut' })).toHaveAttribute(
     'href',
-    `https://wallet.cashu.me/#token=${stored.tokens[0].token}`,
+    `${WALLET_URL}/#token=${stored.tokens[0].token}`,
   )
 })
 
@@ -56,7 +56,7 @@ test('an invoice paid during a reload is resumed, minted and saved', async ({ pa
   )
   await page.goto('./')
   // No photo survived the reload, so it asks for one; the sats are already saved.
-  await expect(page.getByText('Paid! Your bitcoin is saved. Choose a photo to put it in.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText('Paid! Your bitcoin is saved, but the page reloaded. Choose your photo again.')).toBeVisible({ timeout: 30_000 })
   const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('kakaonut.tokens') ?? '[]'))
   expect(tokens).toHaveLength(1)
   expect(await page.evaluate(() => localStorage.getItem('kakaonut.pending'))).toBeNull()
@@ -65,4 +65,25 @@ test('an invoice paid during a reload is resumed, minted and saved', async ({ pa
   await page.getByTestId('make-photo-input').setInputFiles({ name: 'p.jpg', mimeType: 'image/jpeg', buffer: photo })
   await expect(page.getByTestId('made-photo')).toContainText('5 sats are hidden in your photo')
   await expect(page.locator('.saved-item')).toHaveCount(1)
+})
+
+test('a reload while the invoice is open keeps the chosen photo', async ({ page }) => {
+  await page.goto('./')
+  const photo = await makePhotoJpeg(page, 1600, 1200)
+  await page.getByTestId('make-photo-input').setInputFiles({ name: 'dinner.jpg', mimeType: 'image/jpeg', buffer: photo })
+  await page.getByTestId('amount-input').fill('7')
+
+  // Hold back the "is it paid?" checks so the reload happens while the invoice is still open.
+  const holdChecks = (route: import('@playwright/test').Route) =>
+    route.request().method() === 'GET' ? route.abort() : route.continue()
+  await page.route('**/v1/mint/quote/bolt11/**', holdChecks)
+  await page.getByRole('button', { name: 'Pay 7 sats' }).click()
+  await expect(page.getByTestId('invoice')).toBeVisible()
+  await page.unroute('**/v1/mint/quote/bolt11/**', holdChecks)
+
+  await page.reload()
+  const done = page.getByTestId('made-photo')
+  await expect(done).toBeVisible({ timeout: 45_000 })
+  await expect(done).toContainText('7 sats are hidden in your photo')
+  await expect(page.getByText('Choose your photo again')).toHaveCount(0)
 })

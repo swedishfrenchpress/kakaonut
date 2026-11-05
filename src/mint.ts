@@ -3,6 +3,8 @@
  * pay for it. Never log tokens.
  */
 
+import { fetchInvoice, resolveLightningAddress } from './lightning'
+
 export type ClaimState = 'unspent' | 'pending' | 'spent'
 
 export interface TokenSummary {
@@ -51,6 +53,12 @@ export async function checkClaimState(token: string): Promise<ClaimState> {
   return 'unspent'
 }
 
+/** A friendly name for known mints, otherwise the host. */
+export function mintName(mintUrl: string): string {
+  if (/minibits\.cash/i.test(mintUrl)) return 'Minibits'
+  return mintHost(mintUrl)
+}
+
 export function mintHost(mintUrl: string): string {
   try {
     const u = new URL(mintUrl)
@@ -62,11 +70,14 @@ export function mintHost(mintUrl: string): string {
 
 /* ---------- Making: invoice → paid → token ---------- */
 
-export const MINTS = {
-  test: 'https://testnut.cashu.space',
-  real: 'https://mint.minibits.cash/Bitcoin',
-} as const
-export type MintChoice = keyof typeof MINTS
+const REAL_MINT = 'https://mint.minibits.cash/Bitcoin'
+const TEST_MINT = 'https://testnut.cashu.space'
+
+/**
+ * The mint new photos are made with: real bitcoin. Automated tests build with VITE_TEST_MINT=1 so
+ * they can use a test mint whose invoices pay themselves.
+ */
+export const MINT_URL = import.meta.env.VITE_TEST_MINT === '1' ? TEST_MINT : REAL_MINT
 
 export function isTestMint(mintUrl: string): boolean {
   return /testnut/i.test(mintUrl)
@@ -98,4 +109,107 @@ export async function mintToken(mintUrl: string, amount: number, quote: string):
   const wallet = await walletFor(mintUrl, 'sat')
   const proofs = await wallet.mintProofsBolt11(amount, quote)
   return cashuTs.getEncodedToken({ mint: mintUrl, proofs, unit: 'sat', memo: 'Kakaonut' }, { removeDleq: true })
+}
+
+/* ---------- Sending a photo's bitcoin to a Lightning address ---------- */
+
+export type SendStep = 'address' | 'invoice' | 'paying'
+
+export type SendErrorCode = 'tooSmall' | 'spent' | 'failed' | 'mismatch' | 'unknown'
+
+export class SendError extends Error {
+  constructor(readonly code: SendErrorCode) {
+    super(code)
+  }
+}
+
+export interface SendResult {
+  /** 'pending': the mint is still paying; the Lightning wallet will show it when it lands. */
+  state: 'paid' | 'pending'
+  address: string
+  /** sats the address receives */
+  sent: number
+  /** sats spent on Lightning fees (paid only) */
+  fee: number
+  /** Unused fee reserve the mint gave back, as a token to claim. */
+  change?: { token: string; amount: number }
+}
+
+const toNum = (a: { toString(): string } | number) => Number(a.toString())
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * Pays a Lightning address with the token's ecash ("melting"): the mint pays the invoice and burns
+ * the proofs. The address gets as much as fits after the mint's fee reserve; whatever reserve isn't
+ * used comes back as change. If the payment fails, the proofs stay unspent and the photo still holds
+ * the bitcoin.
+ */
+export async function sendToLightningAddress(
+  token: string,
+  address: string,
+  onStep?: (step: SendStep) => void,
+): Promise<SendResult> {
+  const cashuTs = await loadCashu()
+  const summary = await summarizeToken(token)
+  const wallet = await walletFor(summary.mint, summary.unit)
+  const proofs = wallet.decodeToken(token).proofs
+  const total = proofs.reduce((sum, p) => sum + toNum(p.amount), 0)
+  const inputFee = toNum(wallet.getFeesForProofs(proofs))
+
+  onStep?.('address')
+  const endpoint = await resolveLightningAddress(address)
+
+  onStep?.('invoice')
+  // Find the biggest invoice that fits: amount + fee reserve + input fee <= total. The reserve
+  // depends on the amount, so start with a guess and adjust from the mint's answer.
+  let amount = total - inputFee - Math.max(2, Math.ceil(total * 0.01))
+  let quote: Awaited<ReturnType<typeof wallet.createMeltQuoteBolt11>> | undefined
+  for (let i = 0; i < 4 && !quote; i++) {
+    if (amount < 1) break
+    const invoice = await fetchInvoice(endpoint, amount)
+    const q = await wallet.createMeltQuoteBolt11(invoice)
+    // Never pay more than we asked the provider for.
+    if (toNum(q.amount) !== amount) throw new SendError('mismatch')
+    const need = amount + toNum(q.fee_reserve) + inputFee
+    if (need <= total) quote = q
+    else amount -= need - total
+  }
+  if (!quote) throw new SendError('tooSmall')
+
+  onStep?.('paying')
+  let melted: Awaited<ReturnType<typeof wallet.meltProofsBolt11>>
+  try {
+    melted = await wallet.meltProofsBolt11(quote, proofs)
+  } catch {
+    // The request can fail after the mint acted on it, so ask about the quote before blaming
+    // Lightning, then tell "already claimed" apart from "nothing was spent".
+    const after = await wallet.checkMeltQuoteBolt11(quote.quote).catch(() => null)
+    const afterState = after ? String(after.state) : ''
+    if (afterState === 'PAID') return { state: 'paid', address: endpoint.address, sent: amount, fee: total - amount }
+    if (afterState === 'PENDING') return { state: 'pending', address: endpoint.address, sent: amount, fee: 0 }
+    const claim = await checkClaimState(token).catch(() => 'unknown' as const)
+    if (claim === 'spent') throw new SendError('spent')
+    if (claim === 'pending') return { state: 'pending', address: endpoint.address, sent: amount, fee: 0 }
+    throw new SendError(claim === 'unknown' ? 'unknown' : 'failed')
+  }
+
+  let state = String(melted.quote.state)
+  const change = melted.change
+  for (let i = 0; state === 'PENDING' && i < 15; i++) {
+    await sleep(2000)
+    const q = await wallet.checkMeltQuoteBolt11(quote.quote)
+    state = String(q.state)
+  }
+  if (state === 'UNPAID') throw new SendError('failed')
+  if (state !== 'PAID') return { state: 'pending', address: endpoint.address, sent: amount, fee: 0 }
+
+  const back = change.reduce((sum, p) => sum + toNum(p.amount), 0)
+  const result: SendResult = { state: 'paid', address: endpoint.address, sent: amount, fee: total - amount - back }
+  if (back > 0) {
+    result.change = {
+      amount: back,
+      token: cashuTs.getEncodedToken({ mint: summary.mint, proofs: change, unit: summary.unit }, { removeDleq: true }),
+    }
+  }
+  return result
 }

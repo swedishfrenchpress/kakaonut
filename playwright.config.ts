@@ -14,7 +14,8 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: `npm run build && npx vite preview --port ${PORT} --strictPort`,
+    // Test builds make photos with the test mint (its invoices pay themselves), never real bitcoin.
+    command: `VITE_TEST_MINT=1 npm run build && npx vite preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}/`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

@@ -271,9 +271,6 @@ p + p {
   display: flex;
   width: 100%;
 }
-.btn--grow {
-  flex: 1;
-}
 .btn-icon {
   font-size: 1.1em;
 }
@@ -1196,18 +1193,83 @@ p + p {
   flex-direction: column;
   gap: 10px;
 }
-.spinner {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2.5px solid var(--hairline);
-  border-top-color: var(--ink);
-  animation: spin 0.9s linear infinite;
+/* A busy primary button stays yellow, with the buddies hopping inside */
+.btn--primary.is-busy:disabled {
+  background: var(--yellow);
+  color: #191919;
+  cursor: progress;
 }
-.spinner--sm {
-  width: 16px;
-  height: 16px;
-  border-width: 2px;
+.btn.is-busy .buddies {
+  margin-right: 4px;
+}
+.money-ln--busy {
+  display: flex;
+  align-items: center;
+  min-height: 72px;
+  padding: 12px 16px;
+}
+
+/* Loader: the coin, the photo and the bolt hop one after another */
+.buddies {
+  --buddy: 28px;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: calc(var(--buddy) * 0.08);
+  height: calc(var(--buddy) * 1.45);
+  flex: none;
+}
+.buddy {
+  width: var(--buddy);
+  height: var(--buddy);
+  transform-origin: 50% 100%;
+  animation: buddy-hop 1.1s cubic-bezier(0.33, 0, 0.3, 1) infinite;
+}
+.buddy:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.buddy:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes buddy-hop {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  10% {
+    transform: translateY(0) scale(1.1, 0.88);
+  }
+  30% {
+    transform: translateY(-40%) scale(0.94, 1.07);
+  }
+  48% {
+    transform: translateY(0) scale(1.08, 0.9);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .buddy {
+    animation: none;
+  }
+}
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-2);
+}
+.loading--column {
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+.loading-label {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.loading--column .loading-label {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .working {
@@ -1297,12 +1359,6 @@ p + p {
   font-size: 15px;
   color: #3c3c43;
 }
-.done-warn {
-  margin-top: -6px;
-  font-size: 13px;
-  color: var(--secondary);
-}
-
 .raw-token {
   display: flex;
   flex-direction: column;
@@ -1631,20 +1687,26 @@ p + p {
   display: flex;
   gap: 8px;
 }
+/* Invoice: "Open in wallet" and "Copy invoice" side by side, equal width. */
+.invoice-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.invoice-buttons .btn {
+  min-width: 0;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+/* Every button in the bar gets an equal share of the width. */
 .composer-inner .btn {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 50px;
+  padding: 0 12px;
   font-size: 16px;
-}
-.composer-hint {
-  text-align: center;
-  font-size: 12px;
-  color: var(--ink-3);
-  margin-top: 6px;
-}
-@media (hover: none) {
-  .composer-hint {
-    display: none;
-  }
+  white-space: nowrap;
 }
 
 .drop-overlay {
@@ -1727,9 +1789,6 @@ p + p {
   background: var(--yellow-soft);
   color: var(--ink);
 }
-.tag--test {
-  margin-top: 6px;
-}
 .facts {
   font-size: 13px;
   color: var(--ink-2);
@@ -1796,24 +1855,15 @@ p + p {
 }
 
 /* Verdicts */
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+.facts-line {
   margin-top: 10px;
-}
-.chip {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--ink-2);
+  font-size: 12.5px;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
-.chip--bad {
-  background: var(--bad-bg);
+.facts-line .is-bad {
   color: var(--bad);
+  font-weight: 600;
 }
 .warnings {
   margin: 8px 0 0;
@@ -1830,81 +1880,196 @@ p + p {
   background: var(--yellow-soft);
 }
 
-.token-amount {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  line-height: 1;
+/* Money card: what Open shows when a photo holds bitcoin, shaped like a money message in a chat.
+   The amount sits on yellow; the ways to take it are plain rows underneath. */
+.bubble--bare {
+  padding: 0;
+  background: none;
+  border-radius: 0;
 }
-.token-num {
-  font-size: 40px;
+.money {
+  width: 280px;
+  max-width: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+}
+.msg--head .money {
+  border-top-left-radius: 4px;
+}
+.money-top {
+  padding: 20px 20px 22px;
+  background: var(--yellow);
+  color: #191919;
+  transition: background 0.3s;
+}
+.money-main {
+  font-size: 34px;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
 }
-.token-unit {
+.money-unit {
   font-size: 18px;
   font-weight: 700;
-  color: var(--ink-2);
+  letter-spacing: -0.01em;
 }
-.token .muted.small {
+.money-sub {
   margin-top: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(59, 30, 30, 0.72);
+  font-variant-numeric: tabular-nums;
 }
-.claim {
-  display: inline-flex;
+.token-num {
+  font-variant-numeric: tabular-nums;
+}
+.money-bottom {
+  border: 1px solid var(--hairline);
+  border-top: 0;
+  border-radius: 0 0 18px 18px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.money-row {
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  font-size: 12.5px;
+  min-height: 52px;
+  padding: 0 16px;
+  font-size: 15px;
+  text-align: center;
+}
+.money-cta {
+  font-size: 16px;
   font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--ink-2);
-  white-space: nowrap;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background 0.15s;
 }
-.token .claim {
-  margin: 10px 0;
+.money-cta--small {
+  min-height: 46px;
+  font-size: 14px;
+  border-top: 1px solid var(--hairline);
 }
-.claim::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-}
-.claim--unspent {
-  background: var(--good-bg);
-  color: var(--good);
-}
-.claim--pending {
-  background: var(--warn-bg);
-  color: var(--warn);
-}
-.claim--spent,
-.claim--unknown {
+.money-row--note {
+  font-size: 14px;
   color: var(--ink-3);
 }
-.claim--checking::before {
-  animation: blink 0.9s infinite alternate;
-}
-@keyframes blink {
-  to {
-    opacity: 0.2;
-  }
-}
-.warn {
-  font-size: 13px;
-  color: var(--warn);
+.money-row--done {
+  font-size: 14px;
   font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
 }
-.token .warn {
-  margin-top: 10px;
+.money-row--done svg {
+  flex: none;
+}
+.money-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--hairline);
+}
+.money-split--one {
+  grid-template-columns: 1fr;
+}
+.money-split button {
+  min-height: 46px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.money-split button + button {
+  border-left: 1px solid var(--hairline);
+}
+.money-cta:hover,
+.money-split button:hover {
+  background: #fafafa;
+  color: var(--ink);
+}
+.money-cta:active,
+.money-split button:active {
+  background: var(--surface-2);
 }
 
-.thread-tools {
+/* Send to a Lightning address, inside the card */
+.money-ln {
+  padding: 12px 12px 0;
+}
+.money-ln-row {
   display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 8px;
+}
+.money-ln-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--fill);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background 0.15s;
+}
+.money-ln-input::placeholder {
+  color: var(--ink-3);
+}
+.money-ln-input:focus {
+  background: var(--fill-hover);
+}
+.money-ln-input[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 1.5px var(--bad);
+}
+.money-ln-send {
+  flex: none;
+  height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.money-ln-send:disabled {
+  background: var(--fill-off);
+  color: var(--ink-off);
+  cursor: not-allowed;
+}
+.money-ln-status {
+  padding: 8px 2px 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.money-ln-status:empty {
+  padding: 0 0 12px;
+}
+.money-ln-status.is-error {
+  color: var(--bad);
+}
+
+/* Already claimed, or being claimed right now */
+.money.is-gone .money-top {
+  background: var(--surface-2);
+  color: var(--ink-3);
+}
+.money.is-gone .money-sub {
+  color: var(--ink-3);
 }
 
 /* ---------- Footer (cream, letter-spaced caps, arched wordmark, mascot peeking up) ---------- */

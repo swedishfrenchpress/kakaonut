@@ -174,7 +174,6 @@ export function TestScreen({ active }: { active: boolean }) {
       <Composer
         label={phase.kind === 'idle' ? t('pick.choosePhoto') : t('test.again')}
         icon={<PhotoIcon size={20} />}
-        hint={t('pick.orDrop')}
         onFiles={start}
         testId="test-photo-input"
       />

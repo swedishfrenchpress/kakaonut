@@ -26,7 +26,7 @@ test('test mode makes 3 sizes without payment, and each reads back intact on Ope
   const files = await makeTestStickers(page)
   expect([...files.keys()].sort()).toEqual(['test-photo-1280.png', 'test-photo-2048.png', 'test-photo-640.png'])
 
-  await page.getByRole('link', { name: 'Open a photo' }).click()
+  await page.goto('./#open')
   await page.getByTestId('open-input').setInputFiles(
     [...files].map(([name, buffer]) => ({ name, mimeType: 'image/png', buffer })),
   )
@@ -39,7 +39,7 @@ test('test mode makes 3 sizes without payment, and each reads back intact on Ope
 test('a JPEG re-save of a test photo is reported as erased', async ({ page }) => {
   const files = await makeTestStickers(page)
   const jpeg = await reencodeAsJpeg(page, files.get('test-photo-640.png')!)
-  await page.getByRole('link', { name: 'Open a photo' }).click()
+  await page.goto('./#open')
   await page.getByTestId('open-input').setInputFiles({ name: 'kakao-resave.jpg', mimeType: 'image/jpeg', buffer: jpeg })
   const verdict = page.locator('[data-verdict="erased"]')
   await expect(verdict).toBeVisible()
@@ -52,7 +52,7 @@ test('copy image, then paste on Open, stays intact (Chromium)', async ({ page, c
   await page.getByTestId('test-sticker').nth(2).getByRole('button', { name: 'Copy image' }).click()
   await expect(page.getByText('Copied!')).toBeVisible()
 
-  await page.getByRole('link', { name: 'Open a photo' }).click()
+  await page.goto('./#open')
   // The Paste image button goes through navigator.clipboard.read(), where Chrome re-encodes the PNG.
   await page.getByRole('button', { name: 'Paste image' }).click()
   await expect(page.locator('[data-verdict="intact"]')).toHaveCount(1)

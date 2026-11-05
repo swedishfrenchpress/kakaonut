@@ -12,8 +12,8 @@ async function openPhotoWith(page: Page, token: string) {
   for (let i = 0; i < data.length; i++) data[i] = (i * 7919) & 0xff
   const pixels: Pixels = { width: w, height: h, channels: 3, data }
   const { png } = makeStickerPng(pixels, token)
-  await page.goto('./#open')
-  await page.getByTestId('open-input').setInputFiles({ name: 'gift.png', mimeType: 'image/png', buffer: Buffer.from(png) })
+  await page.goto('./#redeem')
+  await page.getByTestId('redeem-input').setInputFiles({ name: 'gift.png', mimeType: 'image/png', buffer: Buffer.from(png) })
   await expect(page.getByTestId('claim-state')).toHaveText('Unclaimed')
 }
 

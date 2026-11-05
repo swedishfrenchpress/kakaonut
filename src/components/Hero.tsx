@@ -3,6 +3,7 @@ import { useI18n } from '../i18n'
 import { prefersReducedMotion } from '../hooks'
 import { HeroPhoto, HeroXray } from './HeroPhoto'
 import { Burst } from './Burst'
+import { goToMode } from '../nav'
 
 /**
  * Hero: a KakaoTalk-style chat on a phone. A photo is sent, x-rayed, and the hidden sats pop out.
@@ -71,8 +72,11 @@ export function Hero() {
         </h1>
         <p className="hero-sub">{t('hero.sub')}</p>
         <div className="hero-ctas">
-          <a className="btn btn--primary btn--lg" href="#make" onClick={scrollToMake}>
-            {t('hero.cta')}
+          <a className="btn btn--primary btn--lg" href="#hide" onClick={(e) => goToMode('hide', e)}>
+            {t('hero.hide')}
+          </a>
+          <a className="btn btn--ink btn--lg" href="#redeem" onClick={(e) => goToMode('redeem', e)}>
+            {t('hero.redeem')}
           </a>
         </div>
       </div>
@@ -199,13 +203,6 @@ export function Hero() {
       </div>
     </section>
   )
-}
-
-function scrollToMake(e: React.MouseEvent) {
-  const el = document.getElementById('make')
-  if (!el) return
-  e.preventDefault()
-  el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' })
 }
 
 function Bubble({ className }: { className: string }) {

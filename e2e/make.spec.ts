@@ -32,9 +32,9 @@ test('make → pay (test mint) → download → open: intact and unclaimed', asy
   expect(download.suggestedFilename()).toBe('kakaonut-21-sats.png')
   const png = await readFile((await download.path())!)
 
-  await page.getByRole('link', { name: 'Open a photo' }).click()
-  await page.getByTestId('open-input').setInputFiles({ name: 'from-friend.png', mimeType: 'image/png', buffer: png })
-  await expect(page.locator('[data-verdict="intact"]')).toBeVisible()
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Redeem' }).click()
+  await page.getByTestId('redeem-input').setInputFiles({ name: 'from-friend.png', mimeType: 'image/png', buffer: png })
+  await expect(page.locator('[data-redeem="money"]')).toBeVisible()
   await expect(page.locator('.token-num')).toHaveText('21')
   await expect(page.getByTestId('claim-state')).toHaveText('Unclaimed')
   await expect(page.getByRole('link', { name: 'Claim in Kakaonut' })).toHaveAttribute(

@@ -8,9 +8,9 @@ export function canShareFiles(file: File): boolean {
   }
 }
 
-export async function shareFile(file: File): Promise<'shared' | 'cancelled' | 'failed'> {
+export async function shareFile(file: File, text?: string): Promise<'shared' | 'cancelled' | 'failed'> {
   try {
-    await navigator.share({ files: [file] })
+    await navigator.share(text ? { files: [file], text } : { files: [file] })
     return 'shared'
   } catch (e) {
     return e instanceof DOMException && e.name === 'AbortError' ? 'cancelled' : 'failed'

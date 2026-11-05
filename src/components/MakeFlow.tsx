@@ -15,11 +15,11 @@ import {
   type ClaimState,
 } from '../mint'
 import { claimLink } from '../config'
+import { redeemUrl } from '../nav'
 import { clearPendingPhoto, loadPendingPhoto, savePendingPhoto } from '../photoStore'
 import { addToken, clearPending, deleteToken, loadPending, loadTokens, savePending, type PendingQuote, type SavedToken } from '../wallet'
 import { canCopyImage, canShareFiles, copyPng, copyText, downloadBlob, shareFile } from '../actions'
 import { DropOverlay } from './Composer'
-import { Burst } from './Burst'
 import { Buddies, Loading } from './Buddies'
 import { CheckIcon, ChevronIcon, CopyIcon, DownloadIcon, PhotoIcon, ShareIcon } from './Icons'
 
@@ -226,15 +226,8 @@ export function MakeFlow({ active }: { active: boolean }) {
   )
 
   return (
-    <section className="make" id="make" aria-labelledby="make-title">
+    <>
       {active && <DropOverlay show={dragging} label={t('drop.overlay')} />}
-      <div className="make-head">
-        <h2 id="make-title">
-          <Burst>{t('make.title')}</Burst>
-        </h2>
-        <p>{t('make.sub')}</p>
-      </div>
-
       <div className="make-body" ref={card}>
         {(stage.k === 'form' || stage.k === 'quoting') && (
           <>
@@ -376,7 +369,7 @@ export function MakeFlow({ active }: { active: boolean }) {
           setSaved(loadTokens())
         }}
       />
-    </section>
+    </>
   )
 }
 
@@ -512,7 +505,7 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
           {(share || canCopyImage()) && (
             <div className="btn-row">
               {share && (
-                <button type="button" className="btn btn--quiet" onClick={() => void shareFile(made.file)}>
+                <button type="button" className="btn btn--quiet" onClick={() => void shareFile(made.file, t('share.text', { url: redeemUrl() }))}>
                   <ShareIcon size={18} />
                   {t('action.share')}
                 </button>

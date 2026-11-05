@@ -17,13 +17,13 @@ for (const colorScheme of ['light'] as const) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360)
       await page.screenshot({ path: `test-results/shots/test-${colorScheme}-${lang}.png`, fullPage: true })
 
-      await page.locator('.foot a[href="#open"]').click()
-      await page.getByTestId('open-input').setInputFiles({ name: 'resaved-photo-from-kakaotalk.jpg', mimeType: 'image/jpeg', buffer: photo })
-      await expect(page.locator('[data-verdict="erased"]')).toBeVisible()
+      await page.locator('.foot a[href="#redeem"]').click()
+      await page.getByTestId('redeem-input').setInputFiles({ name: 'resaved-photo-from-kakaotalk.jpg', mimeType: 'image/jpeg', buffer: photo })
+      await expect(page.locator('[data-redeem="erased"]')).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360)
-      await page.screenshot({ path: `test-results/shots/open-${colorScheme}-${lang}.png`, fullPage: true })
+      await page.screenshot({ path: `test-results/shots/redeem-${colorScheme}-${lang}.png`, fullPage: true })
 
-      await page.locator('.brand').click()
+      await page.locator('.modes a[href="#hide"]').click()
       await page.getByTestId('make-photo-input').setInputFiles({ name: 'p.jpg', mimeType: 'image/jpeg', buffer: photo })
       await expect(page.locator('.picker--has')).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360)
@@ -51,10 +51,29 @@ test('always light, even when the phone prefers dark', async ({ page }) => {
   expect(bg).toBe('rgb(255, 255, 255)')
 })
 
-test('the hero has no Open button; Open lives in the footer', async ({ page }) => {
+test('Hide and Redeem: two doors in the top bar, the hero and the footer', async ({ page }) => {
   await page.goto('./')
-  await expect(page.locator('.hero').getByRole('link', { name: /open/i })).toHaveCount(0)
-  await page.getByRole('link', { name: 'Open a photo' }).click()
-  await expect(page).toHaveURL(/#open$/)
-  await expect(page.getByText('Got a photo with bitcoin in it?')).toBeVisible()
+  const nav = page.getByRole('navigation', { name: 'Main' })
+  // A fresh visit opens on Hide.
+  await expect(nav.getByRole('link', { name: 'Hide' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { name: 'Hide bitcoin in your photo' })).toBeVisible()
+
+  await page.locator('.hero').getByRole('link', { name: 'Redeem a photo' }).click()
+  await expect(page).toHaveURL(/#redeem$/)
+  await expect(nav.getByRole('link', { name: 'Redeem' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { name: 'Redeem a photo' })).toBeInViewport()
+  await expect(page.locator('.redeem-prompt')).toBeVisible()
+
+  await nav.getByRole('link', { name: 'Hide' }).click()
+  await expect(page.getByRole('heading', { name: 'Hide bitcoin in your photo' })).toBeInViewport()
+
+  await page.locator('.foot').getByRole('link', { name: 'Redeem a photo' }).click()
+  await expect(page.getByRole('heading', { name: 'Redeem a photo' })).toBeInViewport()
+})
+
+test('a #redeem link lands on the Redeem card, in view', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('./#redeem')
+  await expect(page.getByRole('heading', { name: 'Redeem a photo' })).toBeInViewport()
+  await expect(page.getByRole('button', { name: 'Choose photo' })).toBeInViewport()
 })

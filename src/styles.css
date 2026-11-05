@@ -1560,6 +1560,317 @@ p + p {
   height: 100%;
   animation: none;
 }
+/* How the bitcoin hides: photo → pixels → three numbers → last bits */
+.how-visual {
+  margin-top: 36px;
+}
+.how-visual h2 {
+  margin-bottom: 14px;
+}
+.how-sec .px {
+  margin-top: 18px;
+}
+.px {
+  margin: 0;
+}
+.px-bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.px-bar {
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.px-bar span {
+  position: relative;
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+.px-bar span::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.px-bar.is-done span::after,
+.px-bar.is-on span::after {
+  transform: scaleX(1);
+}
+.px-bar span.is-filling::after {
+  animation: px-fill var(--px-ms) linear both;
+}
+@keyframes px-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.px-stage {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.px-stage:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.px-zoom {
+  position: absolute;
+  inset: 0;
+  transition: transform 1.2s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.px:not([data-step='0']) .px-zoom {
+  transform: scale(10);
+}
+.px-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Step 1 marks the zoom box (200,50 / 32×24 of the 320×240 scene); it grows with the zoom */
+.px-box {
+  position: absolute;
+  left: 62.5%;
+  top: 20.8333%;
+  width: 10%;
+  height: 10%;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1.5px var(--ink);
+  transition: opacity 0.3s;
+}
+.px:not([data-step='0']) .px-box {
+  opacity: 0;
+}
+.px[data-step='2'] .px-zoom,
+.px[data-step='3'] .px-zoom {
+  visibility: hidden;
+  transition: transform 1.2s cubic-bezier(0.65, 0, 0.35, 1), visibility 0s 0.45s;
+}
+/* The same box as real pixels: 8 × 6 squares */
+.px-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 3px;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.45s;
+}
+.px[data-step='1'] .px-grid {
+  opacity: 1;
+  transition-delay: 1s;
+}
+.px-grid .is-pick {
+  box-shadow: inset 0 0 0 3px var(--ink);
+}
+
+/* Steps 3 and 4: one pixel, as numbers */
+.px-pixel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--panel);
+  opacity: 0;
+  transition: opacity 0.45s;
+}
+.px[data-step='2'] .px-pixel,
+.px[data-step='3'] .px-pixel {
+  opacity: 1;
+}
+.px-swatches {
+  display: flex;
+  gap: 10px;
+}
+.px-swatch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.px-swatch > span {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+.px-swatch small {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.px-swatch--after,
+.px[data-step='2'] .px-swatch small {
+  visibility: hidden;
+}
+.px[data-step='3'] .px-swatch--after {
+  visibility: visible;
+}
+.px-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.px-row {
+  --bit: min(22px, 5.4vw);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.px-ch {
+  width: 14px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.px-row--R .px-ch {
+  color: #e5484d;
+}
+.px-row--G .px-ch {
+  color: #2f9e5a;
+}
+.px-row--B .px-ch {
+  color: #3e6ad8;
+}
+.px-byte {
+  display: flex;
+  gap: 2px;
+}
+.px-bit {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--bit);
+  height: var(--bit);
+  border-radius: 5px;
+  background: var(--surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  transition: background 0.3s 0.3s;
+}
+.px-bit-old,
+.px-bit-new {
+  grid-area: 1 / 1;
+  transition: transform 0.35s 0.5s, opacity 0.35s 0.5s;
+}
+.px-bit-new {
+  opacity: 0;
+  transform: translateY(70%);
+}
+.px[data-step='3'] .px-bit.is-last {
+  background: var(--yellow);
+}
+.px[data-step='3'] .is-changed .is-last .px-bit-old {
+  opacity: 0;
+  transform: translateY(-70%);
+}
+.px[data-step='3'] .is-changed .is-last .px-bit-new {
+  opacity: 1;
+  transform: none;
+}
+.px-num {
+  display: inline-flex;
+  gap: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.px-num-arrow,
+.px-num-new {
+  display: none;
+}
+.px[data-step='3'] .px-num-arrow,
+.px[data-step='3'] .px-num-new {
+  display: inline;
+}
+.px[data-step='3'] .is-changed .px-num-old,
+.px-num-arrow {
+  color: var(--ink-3);
+}
+.px-token {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  opacity: 0;
+  transition: opacity 0.4s 0.2s;
+}
+.px[data-step='3'] .px-token {
+  opacity: 1;
+}
+.px-token code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ink);
+}
+.px-token mark {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: var(--yellow);
+  color: inherit;
+}
+.px-token-bits {
+  display: inline-flex;
+  gap: 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.px-token-bits span {
+  padding: 1px 3px;
+  border-radius: 3px;
+  color: var(--ink-3);
+}
+.px-token-bits .is-used {
+  background: var(--yellow);
+  color: var(--ink);
+}
+.px figcaption {
+  min-height: 3.2em;
+  margin-top: 12px;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .px-zoom,
+  .px-grid,
+  .px-pixel,
+  .px-bit,
+  .px-bit-old,
+  .px-bit-new,
+  .px-token {
+    transition: none;
+  }
+}
+
 .how-good {
   margin-top: 28px;
   padding: 0 4px;

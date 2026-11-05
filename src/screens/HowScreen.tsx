@@ -3,6 +3,7 @@ import { useI18n, type Key } from '../i18n'
 import { Burst } from '../components/Burst'
 import { Character } from '../components/Buddies'
 import { LogoMark } from '../components/Logo'
+import { PixelExplainer } from '../components/PixelExplainer'
 
 /** How it works: a simple explanation first, an advanced one a tab away. */
 
@@ -81,6 +82,10 @@ function Simple() {
           </li>
         ))}
       </ol>
+      <section className="how-visual">
+        <h2>{t('px.title')}</h2>
+        <PixelExplainer />
+      </section>
       <div className="how-good">
         <h2>{t('how.good.title')}</h2>
         <ul>
@@ -103,7 +108,12 @@ function Advanced() {
         <section key={s} className="how-sec">
           <h2>{t(`how.a.${s}.title` as Key)}</h2>
           <p>{t(`how.a.${s}.body` as Key)}</p>
-          {s === 'pixels' && <Frame />}
+          {s === 'pixels' && (
+            <>
+              <PixelExplainer />
+              <Frame />
+            </>
+          )}
         </section>
       ))}
       <a className="how-source" href={REPO} target="_blank" rel="noopener noreferrer">

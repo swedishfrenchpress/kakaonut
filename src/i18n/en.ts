@@ -212,6 +212,16 @@ export const en = {
   'how.a.privacy.title': 'Privacy',
   'how.a.privacy.body': 'Blind signatures mean the mint can’t link the person who paid to the person who claims. The website is static: no backend, no accounts, no analytics. Your photo is resized and re-encoded on your device, so the new PNG carries no EXIF, location or dates. Hidden isn’t encrypted: anyone who knows the format can read the token, so treat the photo like cash.',
   'how.a.source': 'Source code on GitHub',
+  'px.title': 'How the bitcoin hides',
+  'px.step': 'Step {n}',
+  'px.next': 'Next step',
+  'px.before': 'Before',
+  'px.after': 'After',
+  'px.ecash': 'Ecash',
+  'px.0': 'This is your photo. It looks completely normal.',
+  'px.1': 'Zoom in, and it’s a grid of tiny squares called pixels.',
+  'px.2': 'Each pixel is three numbers: how much red, green and blue. Computers store each one as eight 0s and 1s.',
+  'px.3': 'Kakaonut sets the last 0 or 1 of each number to the next bit of your ecash. A colour shifts by at most 1 out of 255, so the photo looks the same.',
 }
 
 export type Key = keyof typeof en

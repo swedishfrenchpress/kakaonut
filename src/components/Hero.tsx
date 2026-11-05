@@ -134,19 +134,19 @@ export function Hero() {
       </div>
 
       <div className="hero-stage">
-
         <div className="phone" ref={phone} role="img" aria-label={t('chat.label', { amount: num(AMOUNT) })}>
           <div className="phone-screen" aria-hidden="true">
             <div className="kt-status">
-              <span>9:41</span>
+              <span className="kt-time">9:41</span>
+              <span className="kt-island" />
               <span className="kt-status-icons">
-                <i />
-                <i />
-                <i />
+                <SignalIcon />
+                <WifiIcon />
+                <BatteryIcon />
               </span>
             </div>
             <div className="kt-head">
-              <span className="kt-back">‹</span>
+              <BackIcon />
               <span className="kt-title">{t('chat.friend')}</span>
               <span className="kt-head-icons">
                 <SearchIcon />
@@ -246,6 +246,46 @@ export function Hero() {
         </div>
       </div>
     </section>
+  )
+}
+
+/* The phone's status bar, drawn at iPhone proportions: four signal bars, a Wi-Fi fan, a battery. */
+function SignalIcon() {
+  return (
+    <svg viewBox="0 0 17 11" width="15" height="10" fill="currentColor">
+      <rect x="0" y="7" width="3" height="4" rx="1" />
+      <rect x="4.6" y="5" width="3" height="6" rx="1" />
+      <rect x="9.2" y="2.6" width="3" height="8.4" rx="1" />
+      <rect x="13.8" y="0" width="3" height="11" rx="1" />
+    </svg>
+  )
+}
+
+function WifiIcon() {
+  return (
+    <svg viewBox="0 0 16 12" width="14" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M1.64 4.64 A9 9 0 0 1 14.36 4.64" />
+      <path d="M4.46 7.46 A5 5 0 0 1 11.54 7.46" />
+      <circle cx="8" cy="10.2" r="1.3" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function BatteryIcon() {
+  return (
+    <svg viewBox="0 0 27 12" width="23" height="10.5">
+      <rect x="0.5" y="0.5" width="23" height="11" rx="3.2" fill="none" stroke="currentColor" strokeOpacity="0.4" />
+      <rect x="2" y="2" width="20" height="8" rx="1.8" fill="currentColor" />
+      <path d="M25 4.2v3.6a2 2 0 0 0 0-3.6z" fill="currentColor" fillOpacity="0.45" />
+    </svg>
+  )
+}
+
+function BackIcon() {
+  return (
+    <svg className="kt-back" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 5 8 12l7 7" />
+    </svg>
   )
 }
 

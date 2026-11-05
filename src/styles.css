@@ -20,16 +20,17 @@
   --hairline: #e5e5ea;
   --grey-page: #f5f5f7;
   --secondary: #6e6e73;
-  --tertiary: #86868b;
+  /* Same grey as --secondary: the lighter one failed contrast for the text it carried */
+  --tertiary: #6e6e73;
   --ink: #191919;
   --ink-2: #555555;
-  --ink-3: #8c8c8c;
+  --ink-3: #6e6e73;
 
   --good: #1f9d55;
   --good-bg: #e6f6ec;
-  --warn: #b25e00;
+  --warn: #9a5100;
   --warn-bg: #fff2df;
-  --bad: #e03131;
+  --bad: #c92a2a;
   --bad-bg: #ffe9e9;
 
   --brown: #3b1e1e;
@@ -73,7 +74,15 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
-  overflow-wrap: anywhere;
+  /* Words only break mid-word where long unbroken strings live: addresses, tokens, mint errors */
+  overflow-wrap: break-word;
+}
+
+/* Prose never ends on a lone word */
+p,
+li,
+figcaption {
+  text-wrap: pretty;
 }
 
 img {
@@ -130,9 +139,10 @@ p + p {
 .top-row {
   max-width: 1160px;
   margin: 0 auto;
-  height: 64px;
+  min-height: 64px;
   padding: 0 16px;
   display: flex;
+  flex-wrap: wrap; /* only at large zoom: the language button drops under the switch */
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -368,18 +378,29 @@ p + p {
   font-size: clamp(38px, 8vw, 72px);
   line-height: 1.12;
   font-weight: 800;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.04em;
   text-wrap: balance;
 }
+/* Hangul crowds at Latin tracking: about half the squeeze, a little more leading */
 .hero-title:lang(ko) {
   font-size: clamp(32px, 6.2vw, 56px);
   line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+.make-head h2:lang(ko),
+.how-head h1:lang(ko) {
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+:is(.hero-sub, .make-head p, .how-head p, .done-tip, .redeem-msg p, .pay-note):lang(ko) {
+  line-height: 1.65;
 }
 
 .hero-sub {
   margin: 18px auto 0;
   max-width: 560px;
   font-size: 17px;
+  line-height: 1.5;
   color: var(--ink-2);
   text-wrap: pretty;
 }
@@ -392,7 +413,7 @@ p + p {
 }
 /* Hide and Redeem are equal doors: the same width, side by side or stacked. */
 .hero-ctas .btn {
-  min-width: 196px;
+  min-width: min(196px, 100%);
 }
 @media (max-width: 480px) {
   .hero-ctas {
@@ -465,46 +486,50 @@ p + p {
   font-family: var(--font);
 }
 
+/* Status bar laid out like an iPhone's: the time centred in the left ear, the island in the middle,
+   signal, Wi-Fi and battery centred in the right ear. */
 .kt-status {
-  height: 32px;
-  padding: 10px 26px 0;
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  font-weight: 700;
+  height: 38px;
+  padding-top: 4px;
+  display: grid;
+  grid-template-columns: 1fr 86px 1fr;
+  align-items: center;
+  color: #191919;
+}
+.kt-time {
+  justify-self: center;
+  margin-left: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.kt-island {
+  height: 24px;
+  border-radius: 999px;
+  background: #000;
 }
 .kt-status-icons {
+  justify-self: center;
+  margin-right: 8px;
   display: flex;
   gap: 4px;
   align-items: center;
 }
-.kt-status-icons i {
+.kt-status-icons svg {
   display: block;
-  width: 14px;
-  height: 8px;
-  border-radius: 2px;
-  background: #191919;
-}
-.kt-status-icons i:nth-child(1) {
-  width: 12px;
-  clip-path: polygon(0 100%, 100% 0, 100% 100%);
-}
-.kt-status-icons i:nth-child(3) {
-  width: 20px;
-  border-radius: 3px;
 }
 
 .kt-head {
-  height: 46px;
+  height: 42px;
   padding: 0 12px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .kt-back {
-  font-size: 28px;
-  line-height: 1;
-  margin-top: -3px;
+  flex: none;
+  margin-left: -4px;
 }
 .kt-title {
   flex: 1;
@@ -620,7 +645,7 @@ p + p {
 }
 .kt-unread {
   color: #f2c200;
-  font-weight: 900;
+  font-weight: 800;
   font-size: 11px;
 }
 
@@ -785,8 +810,8 @@ p + p {
 .make-head p {
   margin-top: 10px;
   font-size: 17px;
-  line-height: 1.45;
-  color: var(--secondary);
+  line-height: 1.5;
+  color: var(--ink-2);
 }
 
 /* ---------- Action card: the photo on one side, the money on the other ----------
@@ -1100,9 +1125,9 @@ p + p {
   border: 0;
   border-radius: var(--r-sm);
   background: none;
-  color: #3c3c43;
+  color: var(--ink-2);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition:
     background-color 0.2s,
@@ -1112,7 +1137,6 @@ p + p {
 .seg button[aria-pressed='true'] {
   background: var(--surface);
   color: var(--ink);
-  font-weight: 600;
 }
 .select {
   position: relative;
@@ -1145,6 +1169,7 @@ p + p {
 }
 .invoice-title {
   font-size: 15px;
+  font-weight: 500;
   color: var(--secondary);
 }
 .invoice-amount {
@@ -1153,8 +1178,9 @@ p + p {
   /* Shrinks a long amount instead of wrapping "sats" (or a digit) onto its own line */
   font-size: 34px; /* before iOS 16 */
   font-size: clamp(26px, calc((100cqi - 60px) / (var(--chars, 5) * 0.56 + 0.3)), 44px);
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 .invoice-amount span {
@@ -1378,8 +1404,8 @@ p + p {
 }
 .redeem-msg p {
   margin-top: 8px;
-  font-size: 15.5px;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.6;
   color: var(--ink-2);
 }
 .redeem-actions {
@@ -1415,7 +1441,7 @@ p + p {
   display: flex;
   min-width: 0;
   white-space: nowrap;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--ink-3);
 }
 /* A long name loses its middle: the end (number, extension) is the part that tells photos apart */
@@ -1473,8 +1499,9 @@ p + p {
   color: var(--ink-2);
 }
 .notice-detail {
+  overflow-wrap: anywhere;
   margin-top: 8px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--ink-3);
 }
 
@@ -1580,12 +1607,12 @@ p + p {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  color: #248a3d;
+  color: #1a7f45;
   vertical-align: bottom;
 }
 .done-tip {
   font-size: 15px;
-  color: #3c3c43;
+  color: var(--ink-2);
 }
 .raw-token {
   display: flex;
@@ -1704,13 +1731,13 @@ p + p {
   font-variant-numeric: tabular-nums;
 }
 .status {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--tertiary);
   white-space: nowrap;
 }
 .status--unspent {
-  color: #248a3d;
+  color: #1a7f45;
 }
 .status--pending {
   color: #c93400;
@@ -1756,9 +1783,9 @@ p + p {
   padding: 0 14px 0 11px;
 }
 .pay-note {
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
 }
 .saved-actions .btn {
   flex: none;
@@ -1767,7 +1794,7 @@ p + p {
 .saved-warn {
   flex: 1;
   min-width: 0;
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--bad);
 }
@@ -1806,9 +1833,14 @@ p + p {
 }
 .how-head p {
   margin-top: 12px;
-  font-size: 18px;
-  color: var(--secondary);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink-2);
   text-wrap: balance;
+}
+/* Phrases of a short line stay whole, so it breaks at a comma, not before its last word */
+.phrase {
+  display: inline-block;
 }
 .how-tabs {
   margin-top: 24px;
@@ -1821,7 +1853,6 @@ p + p {
 .seg button[aria-selected='true'] {
   background: var(--surface);
   color: var(--ink);
-  font-weight: 600;
 }
 .how-tabs button:focus-visible {
   outline: 2px solid var(--ink);
@@ -1829,6 +1860,7 @@ p + p {
 }
 .how-panel h2 {
   margin: 0;
+  text-wrap: balance;
   color: var(--ink);
   font-size: 19px;
   font-weight: 700;
@@ -2174,8 +2206,8 @@ p + p {
 .px figcaption {
   min-height: 3.2em;
   margin-top: 12px;
-  font-size: 15.5px;
-  line-height: 1.5;
+  font-size: 16px;
+  line-height: 1.6;
   color: var(--ink);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2253,7 +2285,7 @@ p + p {
 }
 .frame figcaption {
   margin-top: 10px;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--ink-3);
 }
 .how-source {
@@ -2607,7 +2639,7 @@ svg.flash-in {
 }
 .tag {
   display: inline-block;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: var(--r-xs);
@@ -2661,7 +2693,7 @@ svg.flash-in {
   counter-increment: step;
   position: relative;
   padding-left: 32px;
-  font-size: 14.5px;
+  font-size: 15px;
 }
 .howto li::before {
   content: counter(step);
@@ -2682,7 +2714,7 @@ svg.flash-in {
 /* Verdicts */
 .facts-line {
   margin-top: 10px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -2698,7 +2730,7 @@ svg.flash-in {
 }
 .test-line {
   margin-top: 8px;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   padding: 6px 10px;
   border-radius: var(--r-sm);
@@ -2884,9 +2916,13 @@ svg.flash-in {
   color: var(--ink-off);
   cursor: not-allowed;
 }
+.money-ln-status,
+.money-ln--busy .loading-label {
+  overflow-wrap: anywhere;
+}
 .money-ln-status {
   padding: 8px 2px 12px;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--ink-3);
 }
@@ -3178,8 +3214,8 @@ select,
   }
 }
 
-/* Very narrow phones (Galaxy Z Fold cover screen): smaller step pictures, more room for text */
-@media (max-width: 380px) {
+/* Phones: smaller step pictures, so the words get a reading line instead of a narrow column */
+@media (max-width: 420px) {
   .how-step {
     gap: 14px;
     padding: 14px;

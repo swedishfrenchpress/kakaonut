@@ -10,7 +10,6 @@ import {
   createInvoice,
   invoiceState,
   isTestMint,
-  mintName,
   mintToken,
   type ClaimState,
 } from '../mint'
@@ -30,7 +29,7 @@ import {
 import { canCopyImage, canShareFiles, copyPng, copyText, downloadBlob, shareFile } from '../actions'
 import { DropOverlay } from './Composer'
 import { Buddies, Loading } from './Buddies'
-import { CheckIcon, ChevronIcon, CopyIcon, DownloadIcon, PhotoIcon, ShareIcon } from './Icons'
+import { CheckIcon, ChevronIcon, CopyIcon, DownloadIcon, PhotoIcon, ShareIcon, TrashIcon } from './Icons'
 
 /**
  * Make: photo → amount → pay → photo with sats inside.
@@ -372,6 +371,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
                   ? t('make.pay.needPhoto')
                   : t('make.pay', { amount: amount ? num(amount) : '–' })}
             </button>
+            <p className="pay-note">{t('make.note')}</p>
           </div>
         </>
       )
@@ -711,11 +711,14 @@ function SavedList({
   )
 }
 
+/**
+ * One sent photo. The row answers "has my friend claimed it?"; actions appear only where they can
+ * still do something: recover unclaimed bitcoin, or clear a claimed row away.
+ */
 function SavedItem({ tok, onPut, onDelete }: { tok: SavedToken; onPut: () => void; onDelete: () => void }) {
   const { t, num, lang } = useI18n()
   const [claim, setClaim] = useState<ClaimState | 'checking' | 'unknown'>('checking')
   const [armed, setArmed] = useState(false)
-  const [copied, flash] = useFlash()
   useEffect(() => {
     let live = true
     checkClaimState(tok.token)
@@ -725,47 +728,68 @@ function SavedItem({ tok, onPut, onDelete }: { tok: SavedToken; onPut: () => voi
       live = false
     }
   }, [tok.token])
+
+  const date = new Date(tok.createdAt)
   const when = new Intl.DateTimeFormat(lang, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(tok.createdAt)
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    ...(date.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }),
+  }).format(date)
+  const claimed = claim === 'spent'
+  const recoverable = claim === 'unspent' || claim === 'unknown'
+  // Deleting unclaimed bitcoin loses it, so that asks first; a claimed row just goes.
+  const remove = () => (claimed || armed ? onDelete() : setArmed(true))
+
   return (
-    <li className="saved-item">
+    <li className={`saved-item saved-item--${claim}`}>
       <div className="saved-row">
-        <strong>
-          {num(tok.amount)} <span>sats</span>
-        </strong>
-        <span className={`status status--${claim}`}>
-          {claim === 'checking' ? t('state.checking') : t(`state.${claim}`)}
-        </span>
+        <div className="saved-main">
+          <strong>
+            {num(tok.amount)} <span>sats</span>
+          </strong>
+          <p className="saved-meta">
+            {when}
+            {isTestMint(tok.mint) && ` · ${t('make.mint.test')}`}
+          </p>
+        </div>
+        <span className={`status status--${claim}`}>{t(`saved.${claim}`)}</span>
+        {claimed && (
+          <button type="button" className="saved-trash" aria-label={t('saved.delete')} onClick={remove}>
+            <TrashIcon size={18} />
+          </button>
+        )}
       </div>
-      <p className="saved-meta">
-        {when} · {mintName(tok.mint)}
-        {isTestMint(tok.mint) && ` · ${t('make.mint.test')}`}
-      </p>
-      <div className="saved-actions">
-        <button type="button" className="link" onClick={onPut}>
-          {t('saved.put')}
-        </button>
-        <a className="link" href={claimLink(tok.token)} target="_blank" rel="noopener noreferrer">
-          {t('saved.takeBack')}
-        </a>
-        <button
-          type="button"
-          className="link"
-          onClick={async () => flash((await copyText(tok.token)) ? t('action.copied') : t('action.copyFailed'))}
-        >
-          {copied ?? t('token.copy')}
-        </button>
-        <button
-          type="button"
-          className={`link link--danger${armed ? ' is-armed' : ''}`}
-          onClick={() => (armed ? onDelete() : setArmed(true))}
-          onBlur={() => setArmed(false)}
-        >
-          {armed ? t('saved.deleteConfirm') : t('saved.delete')}
-        </button>
-      </div>
+      {recoverable && (
+        <div className="saved-actions">
+          {armed ? (
+            // While a delete is armed, the row says what will happen and nothing else competes.
+            <p className="saved-warn" role="alert">
+              {t('saved.deleteConfirm')}
+            </p>
+          ) : (
+            <>
+              <button type="button" className="btn btn--white btn--sm" onClick={onPut}>
+                {t('saved.put')}
+              </button>
+              <a className="btn btn--white btn--sm" href={claimLink(tok.token)} target="_blank" rel="noopener noreferrer">
+                {t('saved.takeBack')}
+              </a>
+            </>
+          )}
+          <button
+            type="button"
+            className={`saved-trash${armed ? ' is-armed' : ''}`}
+            aria-label={t('saved.delete')}
+            onClick={remove}
+            onBlur={() => setArmed(false)}
+          >
+            <TrashIcon size={18} />
+            {armed && <span>{t('saved.delete')}</span>}
+          </button>
+        </div>
+      )}
     </li>
   )
 }

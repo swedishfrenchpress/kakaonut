@@ -418,7 +418,7 @@ function hostOf(url: string): string {
   width: 100%;
   max-width: 420px;
   min-height: min(640px, 100%);
-  border-radius: 28px;
+  border-radius: 8px;
 }
 .q-dialog__inner--maximized .photo-claim {
   max-width: none;
@@ -496,7 +496,7 @@ function hostOf(url: string): string {
   flex-direction: column;
   margin: 4px 12px 12px;
   padding: 0 12px 12px;
-  border-radius: 24px;
+  border-radius: 6px;
   transition: background 0.2s;
 }
 .pc-pick.is-over {
@@ -550,7 +550,7 @@ function hostOf(url: string): string {
   flex: 1 1 auto;
   min-height: 240px;
   max-height: 56vh;
-  border-radius: 22px;
+  border-radius: 6px;
   overflow: hidden;
   background: var(--pc-frame);
 }

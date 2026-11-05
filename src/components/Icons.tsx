@@ -65,6 +65,15 @@ export const BoltIcon = (p: P) => (
   </Svg>
 )
 
+export const TrashIcon = (p: P) => (
+  <Svg {...p}>
+    <path d="M4.5 7h15" />
+    <path d="M9.5 7V5.2c0-.66.54-1.2 1.2-1.2h2.6c.66 0 1.2.54 1.2 1.2V7" />
+    <path d="m6.5 7 .8 11.3c.07.96.87 1.7 1.83 1.7h5.74c.96 0 1.76-.74 1.83-1.7L17.5 7" />
+    <path d="M10 11v5.5M14 11v5.5" />
+  </Svg>
+)
+
 export const ChevronIcon = (p: P) => (
   <Svg {...p}>
     <path d="m8 10 4 4 4-4" />

@@ -321,7 +321,7 @@ $kn-yellow: #fee500;
 $kn-ink: #191919;
 $kn-fill: #f2f2f2;
 $kn-fill-press: #e7e7e7;
-$kn-radius: 14px;
+$kn-radius: 6px; // sharp corners on purpose, same as the site
 
 body[data-theme="kakaonut"] {
   .q-btn {
@@ -407,8 +407,18 @@ body[data-theme="kakaonut"] {
     height: 2px;
   }
 
+  // Sheets, list rows and the token card follow the same sharp corners.
+  .q-dialog__inner > div {
+    border-top-left-radius: 8px !important;
+    border-top-right-radius: 8px !important;
+  }
+  .drawer-card .action-row,
+  .token-card {
+    border-radius: $kn-radius !important;
+  }
+
   .mint-card {
-    --mint-card-radius: 16px;
+    --mint-card-radius: 6px;
     --mint-card-border: transparent;
     --mint-card-active-border: transparent;
   }
@@ -442,7 +452,7 @@ body.body--light[data-theme="kakaonut"] {
   }
   .currency-unit-badge {
     background: #ffffff;
-    border-radius: 8px;
+    border-radius: 4px;
   }
   .currency-unit-text {
     color: $kn-ink;
@@ -499,12 +509,12 @@ body.body--light[data-theme="kakaonut"] {
   // Inputs: grey fill, no outline until focused, rounded rectangle.
   .q-field--outlined .q-field__control {
     background: #f6f6f6;
-    border-radius: 12px;
+    border-radius: 4px;
     &::before {
       border-color: transparent;
     }
   }
   .q-field--outlined.q-field--rounded .q-field__control {
-    border-radius: 12px;
+    border-radius: 4px;
   }
 }

@@ -131,7 +131,7 @@ export const ko: Dict = {
   'chat.label': '애니메이션: 채팅방에 보낸 사진을 엑스레이로 비추자 {amount} sats가 튀어나와요.',
 
   'make.title': '내 사진에 비트코인 숨기기',
-  'make.sub': '사진은 이 기기 밖으로 나가지 않아요.',
+  'make.note': '카카오톡에서는 원본이나 파일로 보내세요. 일반 화질로 보내면 비트코인이 지워져요.',
   'make.step.photo': '사진 고르기',
   'make.photo.dropHint': '또는 여기에 놓으세요',
   'make.photo.change': '사진 바꾸기',
@@ -163,11 +163,16 @@ export const ko: Dict = {
   'make.retry': '다시 시도',
 
   'saved.title': '내역',
-  'saved.hint': '이 기기에만 저장돼요. 사진을 잃어버렸다면 새 사진에 다시 담으세요.',
+  'saved.unspent': '받기 전',
+  'saved.spent': '받기 완료',
+  'saved.pending': '받는 중',
+  'saved.unknown': '확인 못 함',
+  'saved.checking': '확인 중…',
+  'saved.hint': '이 기기에만 저장돼요.',
   'saved.put': '사진에 담기',
   'saved.takeBack': '되찾기',
   'saved.delete': '삭제',
-  'saved.deleteConfirm': '한 번 더 누르면 삭제돼요. 아직 안 받은 비트코인은 사라져요.',
+  'saved.deleteConfirm': '한 번 더 누르면 삭제돼요. 안에 든 비트코인은 사라져요.',
 
   'footer.event': 'bitcoin++ 서울',
   'footer.dates': '2026년 11월 5–6일',

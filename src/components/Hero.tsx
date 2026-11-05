@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { prefersReducedMotion } from '../hooks'
 import { HeroPhoto, HeroXray } from './HeroPhoto'
-import { Burst } from './Burst'
 import { goToMode } from '../nav'
 
 /**
@@ -68,7 +67,7 @@ export function Hero() {
     <section className="hero" aria-labelledby="hero-title">
       <div className="hero-copy">
         <h1 id="hero-title" className="hero-title">
-          <Burst animate>{t('hero.title')}</Burst>
+          {t('hero.title')}
         </h1>
         <p className="hero-sub">{t('hero.sub')}</p>
         <div className="hero-ctas">

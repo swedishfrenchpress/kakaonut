@@ -130,7 +130,7 @@ export const en = {
   'chat.label': 'Animation: a photo is sent in a chat, x-rayed, and {amount} sats pop out of it.',
 
   'make.title': 'Hide bitcoin in your photo',
-  'make.sub': 'Your photo never leaves this device.',
+  'make.note': 'On KakaoTalk, send it as 원본 (Original) or as a file. Normal quality wipes the bitcoin.',
   'make.step.photo': 'Choose a photo',
   'make.photo.dropHint': 'or drop one here',
   'make.photo.change': 'Change photo',
@@ -162,11 +162,16 @@ export const en = {
   'make.retry': 'Try again',
 
   'saved.title': 'History',
-  'saved.hint': 'Saved on this device only. Lost the photo? Put the bitcoin in a new one.',
+  'saved.unspent': 'Unclaimed',
+  'saved.spent': 'Claimed',
+  'saved.pending': 'Being claimed',
+  'saved.unknown': 'Couldn’t check',
+  'saved.checking': 'Checking…',
+  'saved.hint': 'Saved on this device only.',
   'saved.put': 'Put in a photo',
   'saved.takeBack': 'Take back',
   'saved.delete': 'Delete',
-  'saved.deleteConfirm': 'Tap again to delete. Unclaimed bitcoin is lost.',
+  'saved.deleteConfirm': 'Tap again to delete. The bitcoin in it will be lost.',
 
   'footer.event': 'bitcoin++ Seoul',
   'footer.dates': 'Nov 5–6, 2026',

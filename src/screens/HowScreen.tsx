@@ -1,6 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import { useI18n, type Key } from '../i18n'
-import { Burst } from '../components/Burst'
 import { Character } from '../components/Buddies'
 import { LogoMark } from '../components/Logo'
 import { PixelExplainer } from '../components/PixelExplainer'
@@ -27,9 +26,7 @@ export function HowScreen() {
   return (
     <section className="how" aria-labelledby="how-title">
       <div className="how-head">
-        <h1 id="how-title">
-          <Burst>{t('how.title')}</Burst>
-        </h1>
+        <h1 id="how-title">{t('how.title')}</h1>
         <p>{t('how.sub')}</p>
         <div className="seg how-tabs" role="tablist" aria-label={t('how.tabs')}>
           {TABS.map((k) => (

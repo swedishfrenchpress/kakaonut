@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import type { Mode } from '../nav'
-import { Burst } from './Burst'
 import { MakeFlow } from './MakeFlow'
 import { RedeemFlow } from './RedeemFlow'
 
@@ -12,18 +11,16 @@ import { RedeemFlow } from './RedeemFlow'
  */
 export function ActionSection({ mode, active }: { mode: Mode; active: boolean }) {
   const { t } = useI18n()
-  const head = (title: string, sub: string): ReactNode => (
+  const head = (title: string, sub?: string): ReactNode => (
     <div className="make-head">
-      <h2 id="make-title">
-        <Burst>{title}</Burst>
-      </h2>
-      <p>{sub}</p>
+      <h2 id="make-title">{title}</h2>
+      {sub && <p>{sub}</p>}
     </div>
   )
   return (
     <section className="make" id="make" aria-labelledby="make-title" data-mode={mode}>
       <div hidden={mode !== 'hide'}>
-        <MakeFlow active={active && mode === 'hide'} head={mode === 'hide' && head(t('make.title'), t('make.sub'))} />
+        <MakeFlow active={active && mode === 'hide'} head={mode === 'hide' && head(t('make.title'))} />
       </div>
       <div hidden={mode !== 'redeem'}>
         <RedeemFlow

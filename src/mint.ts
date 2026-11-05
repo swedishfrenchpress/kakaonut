@@ -53,12 +53,6 @@ export async function checkClaimState(token: string): Promise<ClaimState> {
   return 'unspent'
 }
 
-/** A friendly name for known mints, otherwise the host. */
-export function mintName(mintUrl: string): string {
-  if (/minibits\.cash/i.test(mintUrl)) return 'Minibits'
-  return mintHost(mintUrl)
-}
-
 export function mintHost(mintUrl: string): string {
   try {
     const u = new URL(mintUrl)

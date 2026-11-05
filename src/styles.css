@@ -35,6 +35,10 @@
   --brown: #3b1e1e;
   --panel: #f7f7f7;
   --panel-2: #f1f1f1;
+  /* Corners: sharp on purpose (the soft default radius reads as generic) */
+  --r: 6px; /* surfaces, cards, main buttons */
+  --r-sm: 4px; /* small controls, chips, inputs, badges */
+  --r-xs: 2px; /* tags, bars */
   --brand-font: 'Bricolage Grotesque', 'Pretendard Variable', Pretendard, system-ui, sans-serif;
   --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo',
     'Noto Sans KR', 'Malgun Gothic', sans-serif;
@@ -79,7 +83,7 @@ img {
 :focus-visible {
   outline: 3px solid var(--ink);
   outline-offset: 2px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
 }
 
 p {
@@ -164,7 +168,7 @@ p + p {
 .modes {
   display: inline-flex;
   padding: 3px;
-  border-radius: 999px;
+  border-radius: var(--r);
   background: var(--surface-2);
 }
 .modes a {
@@ -172,7 +176,7 @@ p + p {
   align-items: center;
   min-height: 34px;
   padding: 0 16px;
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   color: var(--ink-2);
   font-size: 14px;
   font-weight: 600;
@@ -197,7 +201,7 @@ p + p {
   min-height: 34px;
   padding: 0 10px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   background: none;
   color: var(--ink);
   font: inherit;
@@ -218,7 +222,7 @@ p + p {
   }
 }
 
-/* ---------- Buttons: pills, flat, no shadows ---------- */
+/* ---------- Buttons: sharp corners, flat, no shadows ---------- */
 
 .btn {
   font: inherit;
@@ -230,7 +234,7 @@ p + p {
   gap: 8px;
   min-height: 44px;
   padding: 0 20px;
-  border-radius: 999px;
+  border-radius: var(--r);
   border: 0;
   cursor: pointer;
   text-decoration: none;
@@ -336,63 +340,11 @@ p + p {
   letter-spacing: -0.045em;
   text-wrap: balance;
 }
-/* Korean glyphs are wider: keep the hero headline on two lines so the burst reads as an X. */
 .hero-title:lang(ko) {
   font-size: clamp(32px, 6.2vw, 56px);
   line-height: 1.2;
 }
 
-/* Kakao-style light burst behind a heading (see Burst.tsx). */
-.burst {
-  position: relative;
-  display: inline-block;
-  isolation: isolate;
-}
-.burst::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  /* Hug the measured text lines, with a little overhang. */
-  left: calc(var(--bx, 0px) - 0.1em);
-  top: calc(var(--by, 0px) - 0.02em);
-  width: calc(var(--bw, 100%) + 0.2em);
-  height: calc(var(--bh, 100%) + 0.04em);
-  background: var(--yellow);
-  /* Four wedges meeting between the two lines: an X of light. */
-  clip-path: polygon(
-    49% 50%, 0% 11%, 0% 40%,
-    49% 50%, 0% 62%, 1% 93%,
-    49% 50%, 100% 89%, 100% 57%,
-    49% 50%, 100% 45%, 100% 13%,
-    49% 50%
-  );
-}
-.burst[data-lines='1']::before {
-  top: calc(var(--by, 0px) - 0.06em);
-  height: calc(var(--bh, 100%) + 0.12em);
-  /* One line: two wedges pinching to a point under the middle of the line. */
-  clip-path: polygon(
-    50% 94%, 0% 26%, 0% 78%,
-    50% 94%, 50% 94%, 50% 94%,
-    50% 94%, 100% 84%, 100% 30%,
-    50% 94%, 50% 94%, 50% 94%,
-    50% 94%
-  );
-}
-.burst--animate::before {
-  animation: burst-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
-}
-@keyframes burst-in {
-  from {
-    clip-path: polygon(
-      49% 50%, 49% 50%, 49% 50%,
-      49% 50%, 49% 50%, 49% 50%,
-      49% 50%, 49% 50%, 49% 50%,
-      49% 50%, 49% 50%, 49% 50%,
-      49% 50%
-    );
-  }
-}
 .hero-sub {
   margin: 18px auto 0;
   max-width: 560px;
@@ -1005,10 +957,9 @@ p + p {
   }
 }
 
-
 .tile {
   background: var(--panel);
-  border-radius: 28px;
+  border-radius: var(--r);
   padding: 28px 24px;
 }
 
@@ -1024,7 +975,7 @@ p + p {
   justify-content: center;
   gap: 4px;
   border: 0;
-  border-radius: 28px;
+  border-radius: var(--r);
   background: var(--panel);
   color: var(--ink);
   cursor: pointer;
@@ -1078,7 +1029,7 @@ p + p {
 .done-badge {
   position: absolute;
   padding: 7px 14px;
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   background: rgba(0, 0, 0, 0.42);
   -webkit-backdrop-filter: blur(14px) saturate(1.6);
   backdrop-filter: blur(14px) saturate(1.6);
@@ -1162,7 +1113,7 @@ p + p {
   min-height: 36px;
   padding: 0 4px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   background: var(--panel-2);
   color: var(--ink);
   font-size: 15px;
@@ -1196,7 +1147,7 @@ p + p {
   margin: 0;
   padding: 0 0 0 20px;
   background: var(--panel);
-  border-radius: 22px;
+  border-radius: var(--r);
 }
 .group-row {
   display: flex;
@@ -1224,7 +1175,7 @@ p + p {
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
   padding: 2px;
-  border-radius: 999px;
+  border-radius: var(--r);
   background: #e8e8e8;
 }
 .seg button {
@@ -1232,7 +1183,7 @@ p + p {
   min-height: 32px;
   padding: 0 16px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   background: none;
   color: #3c3c43;
   font-size: 14px;
@@ -1300,7 +1251,7 @@ p + p {
   aspect-ratio: 1;
   margin: 24px auto 18px;
   padding: 16px;
-  border-radius: 24px;
+  border-radius: var(--r);
   background: #fff;
   outline: 1px solid var(--hairline);
   outline-offset: -1px;
@@ -1444,7 +1395,7 @@ p + p {
 }
 .redeem .money {
   width: 100%;
-  border-radius: 22px;
+  border-radius: var(--r);
 }
 .redeem .money-top {
   padding: 24px 22px 26px;
@@ -1456,7 +1407,7 @@ p + p {
   font-size: 16px;
 }
 .redeem .money-bottom {
-  border-radius: 0 0 22px 22px;
+  border-radius: 0 0 var(--r) var(--r);
 }
 .redeem-msg {
   padding: 24px 22px;
@@ -1499,7 +1450,7 @@ p + p {
   flex: none;
   width: 48px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   object-fit: cover;
   background: var(--panel);
 }
@@ -1520,7 +1471,7 @@ p + p {
     max-width: 100%;
     height: auto;
     max-height: 560px;
-    border-radius: 28px;
+    border-radius: var(--r);
     background: none;
   }
   .redeem-shot figcaption {
@@ -1559,7 +1510,7 @@ p + p {
 }
 .done-photo {
   position: relative;
-  border-radius: 28px;
+  border-radius: var(--r);
   overflow: hidden;
   background: #000;
   animation: resolve 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -1593,7 +1544,7 @@ p + p {
 /* Photos keep their own shape: the frame hugs the image, no letterboxing */
 .make-preview {
   position: relative;
-  border-radius: 28px;
+  border-radius: var(--r);
   overflow: hidden;
 }
 .make-preview,
@@ -1640,7 +1591,7 @@ p + p {
   flex-direction: column;
   gap: 8px;
   padding: 14px;
-  border-radius: 18px;
+  border-radius: var(--r);
   background: var(--bad-bg);
   color: var(--bad);
   font-size: 14px;
@@ -1652,7 +1603,7 @@ p + p {
   width: 100%;
   padding: 10px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--ink);
   resize: vertical;
@@ -1668,7 +1619,7 @@ p + p {
   gap: 8px;
   min-height: 56px;
   padding: 0 18px 0 20px;
-  border-radius: 22px;
+  border-radius: var(--r);
   background: var(--panel);
   cursor: pointer;
   list-style: none;
@@ -1692,7 +1643,7 @@ p + p {
 .saved-count {
   min-width: 22px;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--ink-2);
   font-size: 13px;
@@ -1714,8 +1665,9 @@ p + p {
 .saved .group {
   margin-bottom: 8px;
 }
+/* A History row: amount and date, the status, and only the actions that can still do something */
 .saved-item {
-  padding: 14px 16px 14px 0;
+  padding: 14px 14px 14px 0;
   border-bottom: 1px solid var(--hairline);
 }
 .saved-item:last-child {
@@ -1723,22 +1675,34 @@ p + p {
 }
 .saved-row {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
 }
-.saved-row strong {
+.saved-main {
+  flex: 1;
+  min-width: 0;
+}
+.saved-main strong {
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.saved-row strong span {
+.saved-main strong span {
   font-weight: 500;
   color: var(--tertiary);
 }
-.status {
+.saved-item--spent .saved-main strong {
+  color: var(--ink-3);
+}
+.saved-meta {
+  margin-top: 2px;
   font-size: 13px;
-  font-weight: 500;
+  color: var(--tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.status {
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--tertiary);
   white-space: nowrap;
 }
@@ -1748,34 +1712,66 @@ p + p {
 .status--pending {
   color: #c93400;
 }
-.saved-meta {
-  margin-top: 2px;
-  font-size: 13px;
-  color: var(--tertiary);
-}
 .saved-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 18px;
-  margin-top: 8px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
 }
-.link {
-  font: inherit;
-  padding: 4px 0;
+.saved-trash {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 36px;
+  height: 36px;
+  margin-left: auto;
+  padding: 0 9px;
   border: 0;
+  border-radius: var(--r-sm);
   background: none;
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 500;
-  text-decoration: none;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
-.link:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.saved-row .saved-trash {
+  margin-left: 0;
 }
-.link--danger {
+.saved-trash:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+.saved-trash.is-armed {
+  background: var(--bad);
+  color: #fff;
+  padding: 0 14px 0 11px;
+}
+.pay-note {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.saved-actions .btn {
+  flex: none;
+  white-space: nowrap;
+}
+.saved-warn {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.4;
   color: var(--bad);
+}
+.btn--white {
+  background: var(--surface);
+}
+.btn--white:hover:not(:disabled) {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
 /* ---------- Chat pages (Open, Test photos): a KakaoTalk-style room ---------- */
@@ -1826,6 +1822,7 @@ p + p {
 }
 .how-panel h2 {
   margin: 0;
+  color: var(--ink);
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -1852,7 +1849,7 @@ p + p {
   align-items: center;
   gap: 18px;
   padding: 18px;
-  border-radius: 24px;
+  border-radius: 6px;
   background: var(--panel);
 }
 .how-step p {
@@ -1864,7 +1861,7 @@ p + p {
   flex: none;
   width: 76px;
   height: 76px;
-  border-radius: 20px;
+  border-radius: 4px;
   background: var(--surface);
 }
 .character {
@@ -1904,7 +1901,7 @@ p + p {
   position: relative;
   display: block;
   height: 4px;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--hairline);
   overflow: hidden;
 }
@@ -1938,7 +1935,7 @@ p + p {
   aspect-ratio: 4 / 3;
   padding: 0;
   border: 0;
-  border-radius: 22px;
+  border-radius: 6px;
   overflow: hidden;
   background: var(--panel);
   color: inherit;
@@ -2032,7 +2029,7 @@ p + p {
 .px-swatch > span {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 2px;
 }
 .px-swatch small {
   font-size: 12.5px;
@@ -2081,7 +2078,7 @@ p + p {
   place-items: center;
   width: var(--bit);
   height: var(--bit);
-  border-radius: 5px;
+  border-radius: 2px;
   background: var(--surface);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12.5px;
@@ -2149,7 +2146,7 @@ p + p {
 }
 .px-token mark {
   padding: 0 2px;
-  border-radius: 3px;
+  border-radius: 2px;
   background: var(--yellow);
   color: inherit;
 }
@@ -2160,7 +2157,7 @@ p + p {
 }
 .px-token-bits span {
   padding: 1px 3px;
-  border-radius: 3px;
+  border-radius: 2px;
   color: var(--ink-3);
 }
 .px-token-bits .is-used {
@@ -2211,7 +2208,7 @@ p + p {
 .frame-row {
   display: flex;
   gap: 3px;
-  border-radius: 14px;
+  border-radius: 6px;
   overflow: hidden;
 }
 .frame-cell {
@@ -2449,22 +2446,22 @@ p + p {
   height: 8px;
   margin-top: 8px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-xs);
   background: var(--surface-2);
   overflow: hidden;
 }
 .progress::-webkit-progress-bar {
   background: var(--surface-2);
-  border-radius: 999px;
+  border-radius: var(--r-xs);
 }
 .progress::-webkit-progress-value {
   background: var(--yellow);
-  border-radius: 999px;
+  border-radius: var(--r-xs);
   transition: width 0.4s;
 }
 .progress::-moz-progress-bar {
   background: var(--yellow);
-  border-radius: 999px;
+  border-radius: var(--r-xs);
 }
 
 .composer {
@@ -2523,7 +2520,7 @@ p + p {
   width: min(420px, 100%);
   padding: 44px 20px;
   border: 3px dashed #191919;
-  border-radius: 28px;
+  border-radius: var(--r);
   background: var(--surface);
   font-size: 22px;
   font-weight: 800;
@@ -2546,7 +2543,7 @@ p + p {
 .sticker-thumb {
   width: 84px;
   height: 84px;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   overflow: hidden;
   background: var(--surface-2);
 }
@@ -2579,7 +2576,7 @@ p + p {
   font-size: 11.5px;
   font-weight: 700;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--r-xs);
   background: var(--yellow-soft);
   color: var(--ink);
 }
@@ -2670,7 +2667,7 @@ p + p {
   font-size: 13.5px;
   font-weight: 600;
   padding: 6px 10px;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   background: var(--yellow-soft);
 }
 
@@ -2684,7 +2681,7 @@ p + p {
 .money {
   width: 280px;
   max-width: 100%;
-  border-radius: 18px;
+  border-radius: var(--r);
   overflow: hidden;
 }
 .msg--head .money {
@@ -2721,7 +2718,7 @@ p + p {
 .money-bottom {
   border: 1px solid var(--hairline);
   border-top: 0;
-  border-radius: 0 0 18px 18px;
+  border-radius: 0 0 var(--r) var(--r);
   background: var(--surface);
   overflow: hidden;
 }
@@ -2807,7 +2804,7 @@ p + p {
   height: 44px;
   padding: 0 12px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   background: var(--fill);
   color: var(--ink);
   font: inherit;
@@ -2831,7 +2828,7 @@ p + p {
   height: 44px;
   padding: 0 16px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   background: var(--ink);
   color: #fff;
   font: inherit;

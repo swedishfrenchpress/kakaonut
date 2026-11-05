@@ -25,7 +25,8 @@ describe('dictionaries', () => {
   it('keep "sats" as the unit next to amounts, in both languages', () => {
     expect(ko['ln.change']).toContain('{amount} sats')
     expect(ko['make.pay']).toContain('{amount} sats')
-    expect(en['chat.pop']).toBe('+{amount} sats')
+    expect(en['chat.label']).toContain('{amount} sats')
+    expect(ko['chat.label']).toContain('{amount} sats')
   })
 })
 

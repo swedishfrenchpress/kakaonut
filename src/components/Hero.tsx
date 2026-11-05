@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { prefersReducedMotion } from '../hooks'
-import { HeroPhoto, HeroXray } from './HeroPhoto'
+import { formatFiat, peekBtcPrice } from '../price'
+import { HeroPhoto, HeroPixels, preloadHeroPhoto } from './HeroPhoto'
 import { goToMode } from '../nav'
 
 /**
- * Hero: a KakaoTalk-style chat on a phone. A photo is sent, x-rayed, and the hidden sats pop out.
+ * Hero: a KakaoTalk-style chat on a phone. A photo is sent, light passes over it like a banknote
+ * held up to a window, its pixels show for a moment, and a footer opens with the bitcoin inside.
  * Plays as a loop of timed steps; with reduced motion it shows the last frame only.
  */
 
-const POP_AMOUNT = 20000
+const AMOUNT = 20000
 
 // Step → when it starts (ms from the start of the loop).
 const TIMELINE = [
@@ -18,12 +20,11 @@ const TIMELINE = [
   1500, // 2: my text
   2300, // 3: my photo, sending
   3000, // 4: photo sent
-  3700, // 5: x-ray scan
-  5300, // 6: coins revealed
-  5900, // 7: +20,000 sats pops
-  7200, // 8: friend replies
+  3500, // 5: light passes over the photo
+  5400, // 6: read; the footer opens with the amount
+  6900, // 7: friend replies
 ]
-const LOOP_MS = 10_800
+const LOOP_MS = 10_200
 const LAST = TIMELINE.length - 1
 
 export function Hero() {
@@ -32,6 +33,9 @@ export function Hero() {
   const [cycle, setCycle] = useState(0)
   const [inView, setInView] = useState(false)
   const phone = useRef<HTMLDivElement>(null)
+  const photo = useRef<HTMLImageElement>(null)
+
+  useEffect(preloadHeroPhoto, [])
 
   // Only play while the phone is on screen, so nobody misses the pop.
   useEffect(() => {
@@ -61,7 +65,10 @@ export function Hero() {
   const now = new Date()
   const time = new Intl.DateTimeFormat(lang, { hour: 'numeric', minute: '2-digit' }).format(now)
   const date = new Intl.DateTimeFormat(lang, { dateStyle: 'full' }).format(now)
-  const read = step >= 7
+  const read = step >= 6
+  // Dollars or won only if this visit already fetched the price: the hero never fetches it.
+  const price = peekBtcPrice()
+  const fiat = price && formatFiat(AMOUNT, price, lang)
 
   return (
     <section className="hero" aria-labelledby="hero-title">
@@ -85,7 +92,7 @@ export function Hero() {
         <Bubble className="deco deco--b" />
         <Bubble className="deco deco--c" />
 
-        <div className="phone" ref={phone} role="img" aria-label={t('chat.label', { amount: num(POP_AMOUNT) })}>
+        <div className="phone" ref={phone} role="img" aria-label={t('chat.label', { amount: num(AMOUNT) })}>
           <div className="phone-screen" aria-hidden="true">
             <div className="kt-status">
               <span>9:41</span>
@@ -143,42 +150,34 @@ export function Hero() {
                       className={[
                         'kt-photo',
                         step === 3 && 'is-sending',
-                        step === 5 && 'is-scanning',
-                        step >= 6 && 'is-revealed',
-                        step >= 7 && 'is-popped',
+                        step === 5 && 'is-lit',
+                        step >= 6 && 'is-open',
                       ]
                         .filter(Boolean)
                         .join(' ')}
                     >
                       <div className="kt-photo-clip">
-                        <HeroPhoto />
-                        <div className="kt-xray">
-                          <HeroXray />
-                        </div>
-                        <div className="kt-scanline">
-                          <span>{t('chat.xray')}</span>
+                        <HeroPhoto ref={photo} />
+                        <div className="kt-light">
+                          <HeroPixels source={photo} />
                         </div>
                         {step === 3 && <div className="kt-sending" />}
                       </div>
-                      {step >= 7 && (
-                        <>
-                          <div className="kt-pop">
-                            <span className="kt-pop-coin">₿</span>
-                            {t('chat.pop', { amount: num(POP_AMOUNT) })}
+                      <div className="kt-photo-foot">
+                        <div className="kt-photo-foot-in">
+                          <div className="kt-photo-foot-body">
+                            <span className="kt-foot-label">{t('chat.inside')}</span>
+                            <b className="kt-foot-main">{fiat || `${num(AMOUNT)} sats`}</b>
+                            {fiat && <span className="kt-foot-sub">{num(AMOUNT)} sats</span>}
                           </div>
-                          <div className="kt-burst">
-                            {Array.from({ length: 8 }, (_, i) => (
-                              <i key={i} style={{ ['--a' as string]: `${i * 45}deg` }} />
-                            ))}
-                          </div>
-                        </>
-                      )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {step >= 8 && (
+              {step >= LAST && (
                 <div className="kt-row kt-row--them">
                   <span className="kt-avatar">🐰</span>
                   <div className="kt-col">

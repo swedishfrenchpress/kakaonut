@@ -650,23 +650,28 @@ p + p {
   font-size: 11px;
 }
 
+/* The photo bubble is a card, like a KakaoTalk link: the photo, and under it a footer that opens
+   once the bitcoin has shown. */
 .kt-photo {
   position: relative;
   width: 178px;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #fff;
 }
 .kt-photo-clip {
   position: relative;
-  border-radius: 13px;
   overflow: hidden;
   aspect-ratio: 4 / 3;
   background: #8aa0b4;
 }
-.hero-photo-svg {
+.hero-photo {
   display: block;
   width: 100%;
   height: 100%;
+  object-fit: cover;
 }
-.kt-photo.is-sending .kt-photo-clip > svg {
+.kt-photo.is-sending .hero-photo {
   opacity: 0.55;
 }
 .kt-sending {
@@ -681,158 +686,82 @@ p + p {
   animation: spin 0.7s linear infinite;
 }
 
-.kt-xray {
+/* Held to the light, like a banknote at a window: a soft band passes once, and where it is the
+   photo shows as its own pixels, a few of them yellow. Outside the band nothing changes. */
+.kt-light {
+  --band: linear-gradient(100deg, transparent 41%, #000 44%, #000 56%, transparent 59%);
   position: absolute;
   inset: 0;
-  clip-path: inset(0 0 100% 0);
-  transition: opacity 0.8s 0.5s;
+  pointer-events: none;
+  -webkit-mask: var(--band) 100% 0 / 300% 100% no-repeat;
+  mask: var(--band) 100% 0 / 300% 100% no-repeat;
 }
-.kt-photo.is-scanning .kt-xray {
-  animation: xray 1.5s ease-in-out forwards;
+.kt-light::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.18);
 }
-.kt-photo.is-revealed .kt-xray {
-  clip-path: inset(0);
+.kt-photo.is-lit .kt-light {
+  animation: lightpass 1.7s cubic-bezier(0.45, 0, 0.55, 1) both;
 }
-.kt-photo.is-popped .kt-xray {
-  opacity: 0;
-}
-@keyframes xray {
+/* The mask is 3 photos wide, so the band's centre sits at 150% − 2 × position. From 88.5% to 11.5%
+   it starts just off the left edge and ends just off the right: all of the travel is on the photo. */
+@keyframes lightpass {
+  from {
+    -webkit-mask-position: 88.5% 0;
+    mask-position: 88.5% 0;
+  }
   to {
-    clip-path: inset(0);
+    -webkit-mask-position: 11.5% 0;
+    mask-position: 11.5% 0;
   }
+}
+.kt-pixels {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.kt-scanline {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 3px;
-  background: #3fe0d0;
-  box-shadow: 0 0 14px 5px rgba(63, 224, 208, 0.7);
-  opacity: 0;
-}
-.kt-scanline span {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #0c1b33;
-  background: #3fe0d0;
-  padding: 1px 5px;
-  border-radius: 4px;
-}
-.kt-photo.is-scanning .kt-scanline {
-  animation: scan 1.5s ease-in-out forwards;
-}
-@keyframes scan {
-  0% {
-    top: 0;
-    opacity: 1;
-  }
-  92% {
-    opacity: 1;
-  }
-  100% {
-    top: 100%;
-    opacity: 0;
-  }
-}
-
-.hx-coin {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: coinpulse 0.8s ease-in-out infinite alternate;
-}
-@keyframes coinpulse {
-  to {
-    transform: scale(1.14);
-  }
-}
-
-.kt-pop {
-  position: absolute;
-  z-index: 2;
-  left: 50%;
-  top: 44%;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px 7px 7px;
-  border-radius: 999px;
-  background: #fee500;
-  color: #191919;
-  border: 2.5px solid #191919;
-  box-shadow: 3px 4px 0 #191919;
-  font-size: 19px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  white-space: nowrap;
-  transform: translate(-50%, -50%) rotate(-7deg);
-  animation:
-    popin 0.65s cubic-bezier(0.2, 1.7, 0.4, 1) both,
-    wiggle 0.9s 0.7s ease-in-out infinite alternate;
-}
-.kt-pop-coin {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+.kt-photo-foot {
   display: grid;
-  place-items: center;
-  background: #f7931a;
-  color: #fff;
-  font-size: 15px;
-  border: 2px solid #191919;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
-@keyframes popin {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, 10%) rotate(10deg) scale(0.2);
-  }
-  60% {
-    opacity: 1;
-    transform: translate(-50%, -60%) rotate(-12deg) scale(1.18);
-  }
+.kt-photo.is-open .kt-photo-foot {
+  grid-template-rows: 1fr;
 }
-@keyframes wiggle {
-  from {
-    transform: translate(-50%, -50%) rotate(-7deg);
-  }
-  to {
-    transform: translate(-50%, -56%) rotate(-2deg) scale(1.04);
-  }
+.kt-photo-foot-in {
+  min-height: 0;
+  overflow: hidden;
 }
-
-.kt-burst {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0;
-  height: 0;
+.kt-photo-foot-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 11px 10px;
+  opacity: 0;
+  transition: opacity 0.3s 0.12s;
 }
-.kt-burst i {
-  position: absolute;
-  left: -8px;
-  top: -8px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fee500;
-  border: 2px solid #b88a00;
-  animation: burst 0.9s cubic-bezier(0.1, 0.7, 0.3, 1) forwards;
+.kt-photo.is-open .kt-photo-foot-body {
+  opacity: 1;
 }
-@keyframes burst {
-  from {
-    transform: rotate(var(--a)) translateY(0) scale(0.4);
-    opacity: 1;
-  }
-  to {
-    transform: rotate(var(--a)) translateY(-100px) scale(0.9);
-    opacity: 0;
-  }
+.kt-foot-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4d5b68;
+}
+.kt-foot-main {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #191919;
+  font-variant-numeric: tabular-nums;
+}
+.kt-foot-sub {
+  font-size: 11.5px;
+  color: #4d5b68;
 }
 
 .kt-input {

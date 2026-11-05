@@ -124,10 +124,9 @@ export const en = {
   'chat.m1': 'Thanks for lunch today!! 🍜',
   'chat.m2': 'Here’s my half 📸',
   'chat.m3': 'WAIT there’s bitcoin in the photo?? 😂',
-  'chat.pop': '+{amount} sats',
-  'chat.xray': 'X-ray',
+  'chat.inside': 'Bitcoin inside',
   'chat.send': 'Send',
-  'chat.label': 'Animation: a photo is sent in a chat, x-rayed, and {amount} sats pop out of it.',
+  'chat.label': 'Animation: a photo is sent in a chat. Light passes over it and shows {amount} sats hidden in its pixels.',
 
   'make.title': 'Hide bitcoin in your photo',
   'make.note': 'On KakaoTalk, send it as 원본 (Original) or as a file. Normal quality wipes the bitcoin.',

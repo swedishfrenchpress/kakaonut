@@ -125,10 +125,9 @@ export const ko: Dict = {
   'chat.m1': '오늘 점심 고마워!! 🍜',
   'chat.m2': '내 몫 보낼게 📸',
   'chat.m3': '헐 사진에 비트코인이?? ㅋㅋㅋ',
-  'chat.pop': '+{amount} sats',
-  'chat.xray': '엑스레이',
+  'chat.inside': '사진 속 비트코인',
   'chat.send': '전송',
-  'chat.label': '애니메이션: 채팅방에 보낸 사진을 엑스레이로 비추자 {amount} sats가 튀어나와요.',
+  'chat.label': '애니메이션: 채팅방에 보낸 사진에 빛을 비추자 픽셀 속에 숨은 {amount} sats가 보여요.',
 
   'make.title': '내 사진에 비트코인 숨기기',
   'make.note': '카카오톡에서는 원본이나 파일로 보내세요. 일반 화질로 보내면 비트코인이 지워져요.',

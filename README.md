@@ -69,7 +69,7 @@ The site and the wallet share this format and the same code (`src/stego.ts`, `sr
   carries no EXIF, location or dates from the original.
 - **A photo is cash.** Anyone who has the photo and knows to look can claim it, and the data is
   hidden, not encrypted. Only send it to the person it's for. Until it's claimed, the sender can
-  take the bitcoin back from "Your bitcoin photos" on the site.
+  take the bitcoin back from History on the site.
 
 ## What's in this repo
 

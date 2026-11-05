@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useI18n, type Key } from '../i18n'
 import { useDropImages, usePasteImages } from '../hooks'
 import { readStickerInWorker } from '../workerClient'
@@ -38,7 +38,7 @@ function outcomeOf(result: StickerReadResult): Outcome {
   return { k: 'money', token: result.token, check: { claim: 'checking' } }
 }
 
-export function RedeemFlow({ active }: { active: boolean }) {
+export function RedeemFlow({ active, head }: { active: boolean; head: ReactNode }) {
   const { t } = useI18n()
   const [stage, setStage] = useState<Stage>({ k: 'idle' })
   const [notice, setNotice] = useState<string | null>(null)
@@ -113,52 +113,68 @@ export function RedeemFlow({ active }: { active: boolean }) {
   usePasteImages((files) => void read(files), active)
   const dragging = useDropImages((files) => void read(files), active)
 
-  return (
-    <div className="make-body redeem">
-      {active && <DropOverlay show={dragging} label={t('drop.overlay')} />}
+  const choose = () => input.current?.click()
 
-      {stage.k === 'idle' ? (
-        <div className="tile redeem-pick">
-          <PhotoIcon size={30} className="redeem-icon" />
-          <p className="redeem-prompt">{t('redeem.prompt')}</p>
-          {canPaste && (
-            <button type="button" className="btn btn--primary btn--lg btn--block" onClick={paste}>
-              <CopyIcon size={20} />
-              {t('redeem.paste')}
+  return (
+    <>
+      {active && <DropOverlay show={dragging} label={t('drop.overlay')} />}
+      <div className="make-grid redeem">
+        {head}
+
+        {/* Wide screens: a drop area, then the photo itself. Phones: a thumbnail row once there is a photo. */}
+        <div className={`make-photo${stage.k === 'idle' ? ' make-photo--aside' : ''}`}>
+          {stage.k === 'idle' ? (
+            <button type="button" className="picker redeem-drop" onClick={choose}>
+              <PhotoIcon size={30} className="picker-icon" />
+              <span className="picker-title">{t('redeem.drop')}</span>
             </button>
-          )}
-          <button
-            type="button"
-            className={canPaste ? 'btn btn--text' : 'btn btn--primary btn--lg btn--block'}
-            onClick={() => input.current?.click()}
-          >
-            {!canPaste && <PhotoIcon size={20} />}
-            {t('redeem.choose')}
-          </button>
-          {notice && (
-            <p className="redeem-notice" role="status">
-              {notice}
-            </p>
+          ) : (
+            <figure className="redeem-shot">
+              <img src={stage.photo.url} alt="" />
+              <figcaption>{stage.photo.name}</figcaption>
+            </figure>
           )}
         </div>
-      ) : (
-        <>
-          <div className="redeem-photo">
-            <img src={stage.photo.url} alt="" />
-            <span>{stage.photo.name}</span>
-          </div>
-          {stage.k === 'reading' ? (
+
+        <div className="make-panel">
+          {stage.k === 'idle' && (
+            <div className="redeem-actions">
+              {canPaste && (
+                <button type="button" className="btn btn--primary btn--xl btn--block" onClick={paste}>
+                  <CopyIcon size={20} />
+                  {t('redeem.paste')}
+                </button>
+              )}
+              <button
+                type="button"
+                className={`btn btn--xl btn--block ${canPaste ? 'btn--quiet' : 'btn--primary'}`}
+                onClick={choose}
+              >
+                <PhotoIcon size={20} />
+                {t('redeem.choose')}
+              </button>
+              {notice && (
+                <p className="redeem-notice" role="status">
+                  {notice}
+                </p>
+              )}
+            </div>
+          )}
+          {stage.k === 'reading' && (
             <div className="tile redeem-loading">
               <Loading label={t('redeem.reading')} size={40} layout="column" />
             </div>
-          ) : (
-            <Outcome outcome={stage.outcome} />
           )}
-          <button type="button" className="btn btn--text redeem-again" onClick={reset}>
-            {t('redeem.again')}
-          </button>
-        </>
-      )}
+          {stage.k === 'done' && (
+            <>
+              <Outcome outcome={stage.outcome} />
+              <button type="button" className="btn btn--text redeem-again" onClick={reset}>
+                {t('redeem.again')}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
 
       <input
         ref={input}
@@ -172,7 +188,7 @@ export function RedeemFlow({ active }: { active: boolean }) {
           if (files.length) void read(files)
         }}
       />
-    </div>
+    </>
   )
 }
 

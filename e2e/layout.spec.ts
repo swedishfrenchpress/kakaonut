@@ -62,7 +62,7 @@ test('Hide and Redeem: two doors in the top bar, the hero and the footer', async
   await expect(page).toHaveURL(/#redeem$/)
   await expect(nav.getByRole('link', { name: 'Redeem' })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('heading', { name: 'Redeem a photo' })).toBeInViewport()
-  await expect(page.locator('.redeem-prompt')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Choose photo', exact: true })).toBeVisible()
 
   await nav.getByRole('link', { name: 'Hide' }).click()
   await expect(page.getByRole('heading', { name: 'Hide bitcoin in your photo' })).toBeInViewport()
@@ -75,5 +75,5 @@ test('a #redeem link lands on the Redeem card, in view', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('./#redeem')
   await expect(page.getByRole('heading', { name: 'Redeem a photo' })).toBeInViewport()
-  await expect(page.getByRole('button', { name: 'Choose photo' })).toBeInViewport()
+  await expect(page.getByRole('button', { name: 'Choose photo', exact: true })).toBeInViewport()
 })

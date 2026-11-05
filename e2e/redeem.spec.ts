@@ -8,10 +8,10 @@ test('Redeem explains a photo KakaoTalk compressed, and starts over', async ({ p
   const msg = page.locator('[data-redeem="erased"]')
   await expect(msg).toContainText('KakaoTalk compressed this photo')
   await expect(msg).toContainText('원본 (Original)')
-  await expect(page.locator('.redeem-photo')).toContainText('from-kakaotalk.jpg')
+  await expect(page.locator('.redeem-shot')).toContainText('from-kakaotalk.jpg')
 
   await page.getByRole('button', { name: 'Redeem another photo' }).click()
-  await expect(page.locator('.redeem-prompt')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Choose photo', exact: true })).toBeVisible()
 })
 
 test('Redeem says so when a photo has nothing hidden', async ({ page }) => {

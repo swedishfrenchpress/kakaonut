@@ -144,8 +144,9 @@
         </div>
       </div>
 
-      <iOSPWAPrompt />
-      <AndroidPWAPrompt />
+      <!-- Kakaonut: no bouncing "add to home screen" banner; it covered the Receive button. -->
+      <iOSPWAPrompt v-if="!kakaonutMode" />
+      <AndroidPWAPrompt v-if="!kakaonutMode" />
     </div>
 
     <!-- BOTTOM LIGHTNING BUTTONS -->

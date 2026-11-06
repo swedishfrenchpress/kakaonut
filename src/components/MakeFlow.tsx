@@ -25,6 +25,7 @@ import {
   deleteToken,
   loadPending,
   loadTokens,
+  markInPhoto,
   savePending,
   type PendingQuote,
   type SavedToken,
@@ -172,6 +173,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       const preview = new Image()
       preview.src = url
       await preview.decode().catch(() => {})
+      if (!unsaved && markInPhoto(tok.id)) setSaved(loadTokens())
       setStage({
         k: 'done',
         saved: tok,
@@ -219,6 +221,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       mint: pending.mint,
       amount: pending.amount,
       createdAt: Date.now(),
+      photo: false,
     }
     const stored = addToken(tok) // saved before anything else happens to it
     clearPending()
@@ -701,14 +704,11 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
       <div className="done-card">
         <p className="done-title">{t('make.done.title', { amount: num(saved.amount) })}</p>
         <p className="done-facts">
-          <span>PNG</span> ·{' '}
+          <span>PNG</span>,{' '}
           <span>
             {made.width}×{made.height}
-          </span>{' '}
-          · <span>{bytes(made.file.size)}</span> ·{' '}
-          <span className="ok">
-            <CheckIcon size={14} /> {t('sticker.checked')}
           </span>
+          , <span>{bytes(made.file.size)}</span>
         </p>
         <div className="stack">
           <button
@@ -804,7 +804,8 @@ function SavedList({
 
 /**
  * One sent photo. The row answers "has my friend claimed it?"; actions appear only where they can
- * still do something: recover unclaimed bitcoin, or clear a claimed row away.
+ * still do something: recover unclaimed bitcoin, or clear a claimed row away. "Put in a photo" is
+ * only for bitcoin that never made it into one (the page closed, or making the photo failed).
  */
 function SavedItem({ tok, onPut, onDelete }: { tok: SavedToken; onPut: () => void; onDelete: () => void }) {
   const { t, num, lang } = useI18n()
@@ -842,7 +843,7 @@ function SavedItem({ tok, onPut, onDelete }: { tok: SavedToken; onPut: () => voi
           </strong>
           <p className="saved-meta">
             {when}
-            {isTestMint(tok.mint) && ` · ${t('make.mint.test')}`}
+            {isTestMint(tok.mint) && ` (${t('make.mint.test')})`}
           </p>
         </div>
         <span className={`status status--${claim}`}>{t(`saved.${claim}`)}</span>
@@ -861,9 +862,11 @@ function SavedItem({ tok, onPut, onDelete }: { tok: SavedToken; onPut: () => voi
             </p>
           ) : (
             <>
-              <button type="button" className="btn btn--white btn--sm" onClick={onPut}>
-                {t('saved.put')}
-              </button>
+              {tok.photo === false && (
+                <button type="button" className="btn btn--white btn--sm" onClick={onPut}>
+                  {t('saved.put')}
+                </button>
+              )}
               <a className="btn btn--white btn--sm" href={claimLink(tok.token)} target="_blank" rel="noopener noreferrer">
                 {t('saved.takeBack')}
               </a>

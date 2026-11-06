@@ -1603,13 +1603,6 @@ p + p {
 .done-facts span {
   white-space: nowrap;
 }
-.ok {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: #1a7f45;
-  vertical-align: bottom;
-}
 .done-tip {
   font-size: 15px;
   color: var(--ink-2);
@@ -2653,11 +2646,6 @@ svg.flash-in {
 }
 .facts span {
   white-space: nowrap;
-}
-.check {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--good);
 }
 .sticker-actions {
   grid-column: 1 / -1;

@@ -197,10 +197,7 @@ function StickerCard({ sticker: s }: { sticker: TestSticker }) {
           {s.isOriginal && <span className="tag">{t('sticker.original')}</span>}
         </div>
         <div className="facts">
-          <span>PNG</span> · <span>{s.width}×{s.height}</span> · <span>{bytes(s.file.size)}</span>
-        </div>
-        <div className="check">
-          <span aria-hidden="true">✓</span> {t('sticker.checked')}
+          <span>PNG</span>, <span>{s.width}×{s.height}</span>, <span>{bytes(s.file.size)}</span>
         </div>
       </div>
       <div className="sticker-actions">

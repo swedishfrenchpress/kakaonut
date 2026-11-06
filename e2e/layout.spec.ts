@@ -36,12 +36,12 @@ test('language toggle switches instantly and is remembered', async ({ page }) =>
   await page.goto('./#test')
   await page.getByRole('button', { name: '한국어' }).click()
   await expect(page.locator('html')).toHaveAttribute('lang', 'ko')
-  await expect(page).toHaveTitle('카카오넛 · 사진 속에 숨긴 비트코인')
+  await expect(page).toHaveTitle('카카오넛: 사진 속에 숨긴 비트코인')
   await expect(page.locator('.foot')).toContainText('프라이버시 에디션')
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('lang', 'ko')
   await page.getByRole('button', { name: 'EN' }).click()
-  await expect(page).toHaveTitle('Kakaonut · bitcoin hidden in a photo')
+  await expect(page).toHaveTitle('Kakaonut: bitcoin hidden in a photo')
 })
 
 test('always light, even when the phone prefers dark', async ({ page }) => {

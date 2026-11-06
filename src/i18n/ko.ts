@@ -5,7 +5,7 @@ import type { Dict } from './en'
  * Needs a native speaker's review before the demo.
  */
 export const ko: Dict = {
-  'meta.title': '카카오넛 · 사진 속에 숨긴 비트코인',
+  'meta.title': '카카오넛: 사진 속에 숨긴 비트코인',
   'meta.description': '평범한 사진 속에 Cashu 이캐시를 숨겨서 친구에게 보내요. 모든 과정이 브라우저 안에서만 이뤄져요.',
 
   'app.name': '카카오넛',
@@ -20,7 +20,7 @@ export const ko: Dict = {
   'pick.unreadable': '이 사진을 읽을 수 없어요. JPEG이나 PNG로 해보세요.',
   'drop.overlay': '여기에 놓으세요',
 
-  'test.notice': '테스트 · 가짜 데이터예요, 진짜 돈이 아니에요',
+  'test.notice': '테스트용 가짜 데이터예요, 진짜 돈이 아니에요',
   'test.hello': '카카오톡이 숨긴 비트코인을 지켜주는지 확인해 봐요 🔍',
   'test.explain':
     '사진에 가짜 테스트 데이터(돈 아님)를 숨겨서 세 가지 크기로 만들어 드릴게요: 원본(최대 2048px), 1280px, 640px.',
@@ -36,13 +36,12 @@ export const ko: Dict = {
     '테스트 사진을 카카오톡으로 방법마다 하나씩 보내 보세요: 사진(기본 ‘일반’), 원본 화질 사진(보내기 전에 ⋯ → ‘원본’), 파일(+ → ‘파일’), 그리고 PC 카카오톡에 붙여넣기.',
   'test.howto.3': '받는 폰에서 채팅방의 작은 사진과, 눌러서 크게 본 이미지를 둘 다 저장하세요.',
   'test.howto.4': '저장한 이미지를 ‘열어보기’ 탭에서 하나씩 열어 보세요. 카카오톡에서 이미지를 복사해서 여기에 붙여넣는 것도 해보세요.',
-  'test.howto.5': '‘결과 복사’를 눌러서 앱·OS 버전과 함께 KAKAOTALK_RESULTS.md에 붙여넣으세요.',
+  'test.howto.5': '‘결과 복사’를 눌러서 앱과 OS 버전과 함께 KAKAOTALK_RESULTS.md에 붙여넣으세요.',
   'test.found': '테스트 사진이에요(가짜 데이터, 돈 아님). {w}×{h} 크기로 만들었어요.',
 
   'sticker.original': '원본',
   'sticker.px': '{size}px',
-  'sticker.badge': '테스트 · {size}px',
-  'sticker.checked': '자체 확인 통과',
+  'sticker.badge': '테스트 {size}px',
 
   'action.share': '공유…',
   'action.copyImage': '이미지 복사',
@@ -73,7 +72,7 @@ export const ko: Dict = {
   'verdict.unreadable.body': '제가 아는 이미지 형식이 아니에요.',
 
 
-  'token.testMint': '테스트 민트 · 진짜 돈이 아니에요',
+  'token.testMint': '테스트 민트예요, 진짜 돈이 아니에요',
   'token.invalid': '숨긴 토큰을 해석하지 못했어요.',
   'token.copy': '토큰 복사',
   'token.copyFailed': '복사하지 못했어요. 위의 글자를 길게 눌러 복사해 주세요.',
@@ -140,7 +139,7 @@ export const ko: Dict = {
   'make.amount.invalid': '1 이상의 정수로 입력해 주세요.',
   'make.amount.max': '사진 한 장에 최대 {max} sats까지 담을 수 있어요.',
   'make.photo.tooSmall': '사진이 너무 작아서 비트코인을 담을 수 없어요. 더 큰 사진을 골라 주세요.',
-  'make.mint.test': '테스트',
+  'make.mint.test': '테스트 민트',
   'make.size.label': '사진 크기',
   'make.size.original': '원본',
   'make.pay': '{amount} sats 결제하기',

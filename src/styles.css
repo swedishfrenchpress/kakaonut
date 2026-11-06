@@ -1422,24 +1422,27 @@ p + p {
   text-align: center;
   color: var(--ink-2);
 }
+/* The photo keeps its own shape. On phones it stays short enough that the money below it is
+   still in reach; from 720 px it has the left column to itself. */
 .redeem-shot {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
   min-width: 0;
   margin: 0;
 }
 .redeem-shot img {
-  flex: none;
-  width: 48px;
-  height: 36px;
-  border-radius: var(--r-sm);
-  object-fit: cover;
-  background: var(--panel);
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 200px; /* before iOS 15.4 */
+  max-height: min(260px, 28svh);
+  border-radius: var(--r);
 }
 .redeem-shot figcaption {
   display: flex;
   min-width: 0;
+  margin-top: 8px;
   white-space: nowrap;
   font-size: 13px;
   color: var(--ink-3);
@@ -1454,16 +1457,9 @@ p + p {
   flex: none;
 }
 @media (min-width: 720px) {
-  .redeem-shot {
-    display: block;
-  }
   .redeem-shot img {
-    width: auto;
-    max-width: 100%;
-    height: auto;
     max-height: 560px;
-    border-radius: var(--r);
-    background: none;
+    max-height: min(560px, calc(100svh - 96px));
   }
   .redeem-shot figcaption {
     margin-top: 10px;
@@ -2051,7 +2047,14 @@ p + p {
 }
 .px-swatches {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+}
+.px-swatch-eq {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
 }
 .px-swatch {
   display: flex;
@@ -2068,12 +2071,19 @@ p + p {
   font-weight: 600;
   color: var(--ink-2);
 }
-.px-swatch--after,
 .px[data-step='2'] .px-swatch small {
   visibility: hidden;
 }
-.px[data-step='3'] .px-swatch--after {
-  visibility: visible;
+/* "= After" lands once the last bits have rolled over */
+.px-swatch--after,
+.px-swatch-eq {
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+.px[data-step='3'] .px-swatch--after,
+.px[data-step='3'] .px-swatch-eq {
+  opacity: 1;
+  transition-delay: 0.9s;
 }
 .px-rows {
   display: flex;
@@ -2214,7 +2224,9 @@ p + p {
   .px-grid,
   .px-pixel,
   .px-token,
-  .px[data-step] .px-grid {
+  .px[data-step] .px-grid,
+  .px[data-step] .px-swatch--after,
+  .px[data-step] .px-swatch-eq {
     transition: opacity 0.2s ease-out;
     transition-delay: 0s;
   }
@@ -3234,8 +3246,7 @@ select,
   }
   .picker--has img,
   .make-preview img,
-  .done-photo img,
-  .redeem-shot img {
+  .done-photo img {
     max-height: calc(100svh - 96px);
   }
   .make-photo .picker:not(.picker--has) {

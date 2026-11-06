@@ -107,6 +107,8 @@ export function PixelExplainer() {
               <span style={{ background: rgb(SKY) }} />
               <small>{t('px.before')}</small>
             </span>
+            {/* The two colours are meant to match: that is the whole trick, so say it. */}
+            <span className="px-swatch-eq">=</span>
             <span className="px-swatch px-swatch--after">
               <span style={{ background: rgb(AFTER) }} />
               <small>{t('px.after')}</small>

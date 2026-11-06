@@ -147,7 +147,7 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
       <div className="make-grid redeem">
         {head && head(t(canPaste ? 'redeem.sub' : 'redeem.subChoose'))}
 
-        {/* Wide screens: a drop area, then the photo itself. Phones: a thumbnail row once there is a photo. */}
+        {/* Wide screens: a drop area, then the photo itself. Phones: the photo, kept short, once there is one. */}
         <div className={`make-photo${stage.k === 'idle' ? ' make-photo--aside' : ''}`}>
           {stage.k === 'idle' ? (
             <button type="button" className="picker redeem-drop" onClick={choose}>

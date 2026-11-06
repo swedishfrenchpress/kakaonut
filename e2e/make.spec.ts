@@ -26,7 +26,13 @@ test('make → pay (test mint) → download → open: intact and unclaimed', asy
   }))
   expect(stored.pending).toBeNull()
   expect(stored.tokens).toHaveLength(1)
-  expect(stored.tokens[0]).toMatchObject({ amount: 21, mint: TEST_MINT })
+  expect(stored.tokens[0]).toMatchObject({ amount: 21, mint: TEST_MINT, photo: true })
+
+  // It's already in a photo, so History offers Take back but not "Put in a photo".
+  await page.locator('.saved-summary').click()
+  const row = page.locator('.saved-item')
+  await expect(row.getByRole('link', { name: 'Take back' })).toHaveCount(1, { timeout: 15_000 })
+  await expect(row.getByRole('button', { name: 'Put in a photo' })).toHaveCount(0)
 
   const [download] = await Promise.all([page.waitForEvent('download'), done.getByRole('button', { name: /Download/ }).click()])
   expect(download.suggestedFilename()).toBe('kakaonut-21-sats.png')
@@ -59,12 +65,18 @@ test('an invoice paid during a reload is resumed, minted and saved', async ({ pa
   await expect(page.getByText('Paid! Your bitcoin is saved, but the page reloaded. Choose your photo again.')).toBeVisible({ timeout: 30_000 })
   const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('kakaonut.tokens') ?? '[]'))
   expect(tokens).toHaveLength(1)
+  expect(tokens[0].photo).toBe(false)
   expect(await page.evaluate(() => localStorage.getItem('kakaonut.pending'))).toBeNull()
+  // Not in a photo yet, so History offers to put it in one.
+  await page.locator('.saved-summary').click()
+  const put = page.locator('.saved-item').getByRole('button', { name: 'Put in a photo' })
+  await expect(put).toHaveCount(1, { timeout: 15_000 })
 
   const photo = await makePhotoJpeg(page, 1200, 900)
   await page.getByTestId('make-photo-input').setInputFiles({ name: 'p.jpg', mimeType: 'image/jpeg', buffer: photo })
   await expect(page.getByTestId('made-photo')).toContainText('5 sats are hidden in your photo')
   await expect(page.locator('.saved-item')).toHaveCount(1)
+  await expect(put).toHaveCount(0)
 })
 
 test('a reload while the invoice is open keeps the chosen photo', async ({ page }) => {

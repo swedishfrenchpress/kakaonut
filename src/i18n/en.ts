@@ -1,6 +1,6 @@
 /** English strings. Every key here must also exist in ko.ts (enforced by the `Dict` type). */
 export const en = {
-  'meta.title': 'Kakaonut · bitcoin hidden in a photo',
+  'meta.title': 'Kakaonut: bitcoin hidden in a photo',
   'meta.description':
     'Hide Cashu ecash in an ordinary-looking photo and send it to a friend. Everything runs in your browser.',
 
@@ -16,7 +16,7 @@ export const en = {
   'pick.unreadable': 'I couldn’t read that photo. Try a JPEG or PNG.',
   'drop.overlay': 'Drop it here',
 
-  'test.notice': 'TEST · fake data, not real money',
+  'test.notice': 'Fake test data, not real money',
   'test.hello': 'Let’s check if KakaoTalk keeps the hidden bitcoin 🔍',
   'test.explain':
     'I’ll hide fake test data (not money) in your photo at 3 sizes: original (up to 2048 px), 1280 px and 640 px.',
@@ -40,8 +40,7 @@ export const en = {
 
   'sticker.original': 'Original',
   'sticker.px': '{size} px',
-  'sticker.badge': 'TEST · {size}px',
-  'sticker.checked': 'Self-check passed',
+  'sticker.badge': 'TEST {size}px',
 
   'action.share': 'Share…',
   'action.copyImage': 'Copy image',
@@ -72,7 +71,7 @@ export const en = {
   'verdict.unreadable.body': 'It doesn’t look like an image I know.',
 
 
-  'token.testMint': 'Test mint · not real money',
+  'token.testMint': 'Test mint, not real money',
   'token.invalid': 'The hidden token couldn’t be decoded.',
   'token.copy': 'Copy token',
   'token.copyFailed': 'Couldn’t copy. Select the text above and copy it.',
@@ -139,7 +138,7 @@ export const en = {
   'make.amount.invalid': 'Enter a whole number of sats, 1 or more.',
   'make.amount.max': 'Up to {max} sats in one photo.',
   'make.photo.tooSmall': 'This photo is too small to hold bitcoin. Choose a bigger one.',
-  'make.mint.test': 'Test',
+  'make.mint.test': 'test mint',
   'make.size.label': 'Photo size',
   'make.size.original': 'Original',
   'make.pay': 'Pay {amount} sats',

@@ -20,6 +20,11 @@ export interface SavedToken {
   mint: string
   amount: number
   createdAt: number
+  /**
+   * False from payment until the token is in a photo; true after. History offers "Put in a photo"
+   * only while it's false. Missing on tokens saved before this field existed: treated as in a photo.
+   */
+  photo?: boolean
 }
 
 const PENDING = 'kakaonut.pending'
@@ -38,6 +43,14 @@ export function loadTokens(): SavedToken[] {
 export function addToken(t: SavedToken): boolean {
   const list = loadTokens().filter((x) => x.id !== t.id)
   return saveJson(TOKENS, [t, ...list])
+}
+
+/** Records that a saved token is now hidden in a photo. */
+export function markInPhoto(id: string): boolean {
+  return saveJson(
+    TOKENS,
+    loadTokens().map((x) => (x.id === id ? { ...x, photo: true } : x)),
+  )
 }
 
 export function deleteToken(id: string): boolean {

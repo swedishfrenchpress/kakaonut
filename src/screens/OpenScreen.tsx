@@ -186,11 +186,8 @@ function Facts({ r, bad }: { r: StickerReadResult; bad?: boolean }) {
   const { t, bytes } = useI18n()
   return (
     <p className="facts-line" data-testid="facts">
-      <span className={bad ? 'is-bad' : undefined}>{formatName(r.format, t)}</span>
-      <span aria-hidden="true"> · </span>
-      <span>{r.width ? `${r.width}×${r.height}` : t('facts.dimsUnknown')}</span>
-      <span aria-hidden="true"> · </span>
-      <span>{bytes(r.size)}</span>
+      <span className={bad ? 'is-bad' : undefined}>{formatName(r.format, t)}</span>,{' '}
+      <span>{r.width ? `${r.width}×${r.height}` : t('facts.dimsUnknown')}</span>, <span>{bytes(r.size)}</span>
     </p>
   )
 }

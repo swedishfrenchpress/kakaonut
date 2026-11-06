@@ -33,6 +33,9 @@ export function Footer() {
         <a className="foot-accent" href="https://cashu.space" target="_blank" rel="noopener noreferrer">
           {t('footer.credit')}
         </a>
+        <a className="foot-by" href="https://x.com/eriklocalhost" target="_blank" rel="noopener noreferrer">
+          {t('footer.by')}
+        </a>
       </p>
     </footer>
   )

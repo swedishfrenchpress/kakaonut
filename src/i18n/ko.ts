@@ -185,6 +185,7 @@ export const ko: Dict = {
   'footer.dates': '2026년 11월 5–6일',
   'footer.edition': '프라이버시 에디션',
   'footer.credit': 'Cashu 이캐시로 만들었어요',
+  'footer.by': 'Erik이 🇰🇷에서 정성껏 만들었어요',
   'footer.how': '작동 방식',
   'nav.label': '메인',
   'nav.hide': '숨기기',

@@ -184,6 +184,7 @@ export const en = {
   'footer.dates': 'Nov 5–6, 2026',
   'footer.edition': 'Privacy edition',
   'footer.credit': 'Ecash by Cashu',
+  'footer.by': 'Lovingly built by Erik in 🇰🇷',
   'footer.how': 'How it works',
   'nav.label': 'Main',
   'nav.hide': 'Hide',

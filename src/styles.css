@@ -3031,6 +3031,15 @@ svg.flash-in {
   margin-top: 14px;
   color: var(--foot-accent);
 }
+/* The maker's credit: a quiet line under the links, not one of them */
+.foot-col a.foot-by {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--ink-3);
+}
 .foot-logo {
   display: flex;
   flex-direction: column;
